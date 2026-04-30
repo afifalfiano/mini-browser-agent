@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Chrome Extension (MV3) — AI browser agent powered by MiniMax API. Embeds a side panel with chat that controls the browser (navigate, click, fill forms, screenshots, page reading, tab management, DOM inspection).
+Chrome Extension (MV3) — AI browser agent powered by multiple providers (MiniMax, Gemini). Embeds a side panel with chat that controls the browser (navigate, click, fill forms, screenshots, page reading, tab management, DOM inspection).
 
 ## No Build Step
 
@@ -20,14 +20,21 @@ Pure Chrome extension. No bundler, no transpiler, no tests.
 ```
 background.js       → Service worker. API calls, screenshots, tab control, message routing
 content.js          → Injected into every page. DOM reading, clicking, scrolling, form filling,
-                      element labeling system, DOM query, JS evaluation
+                      element labeling system, DOM query, JS evaluation, visual indicators
 tools-registry.js   → ToolRegistry — plugin-based tool registration & execution system
 prompt-engine.js    → PromptEngine — dynamic system prompt builder, action parser, task planner
-memory.js           → Session manager + MemoryManager. Loaded before sidebar.js via script tag
+memory.js           → Session manager + MemoryManager.
+session-recorder.js → Session recording tracker for ZIP report generation
+lib/zip-builder.js  → Pure JS utility for creating .zip files
 sidebar.html        → Side panel entry point (loads all scripts in order)
 sidebar.js          → Chat UI logic, agent loop, inspector panel, action handlers
 sidebar.css         → Styles (including inspector panel, task progress, message types)
 config.js           → Default API key/model config
+
+providers/          → Multi-Provider AI Architecture
+  base.js           → ProviderManager (central registry for AI providers)
+  minimax.js        → MiniMax API implementation
+  gemini.js         → Google Gemini API implementation
 
 tools/              → Individual tool modules (each registers with ToolRegistry on load)
   navigate.js       → navigate, new_tab, go_back, go_forward, reload
@@ -42,6 +49,11 @@ tools/              → Individual tool modules (each registers with ToolRegistr
 
 ## Key Concepts
 
+### Multi-Provider Architecture (providers/)
+- Handled by `ProviderManager` (`base.js`).
+- Sidebar sends `{ type: "PROVIDER_CHAT", provider, payload }` to background.
+- Each provider normalizes the API response to `{ content: "string", raw: { ... } }` so the sidebar logic remains provider-agnostic.
+
 ### ToolRegistry (tools-registry.js)
 - Plugin system: each tool registers with `ToolRegistry.register({ name, description, inputSchema, execute })`
 - Auto-generates system prompt tool blocks via `ToolRegistry.toPromptBlock()`
@@ -55,31 +67,32 @@ tools/              → Individual tool modules (each registers with ToolRegistr
 - Action parser: `PromptEngine.parseAction(responseText)` — supports ```action, ```json, bare JSON
 - Task planning: `createTaskPlan()`, `advanceTask()`, etc.
 
-### Element Labeling (content.js)
+### Element Labeling & Indicators (content.js)
 - Every interactive element gets a label [1], [2], [3]...
 - AI references elements by label instead of fragile CSS selectors
 - Labels reset on each `GET_PAGE_CONTENT` call
-- `resolveElement(label, selector, text)` tries label → selector → text matching
+- Visual action indicators (purple ring) and "working frame" (viewport border) alert the user during autonomous tasks.
 
 ## Message Flow
 
 1. User types in sidebar → `sidebar.js` calls `runAgentLoop()`
 2. Agent loop builds system prompt via `PromptEngine.buildSystemPrompt()` + memory
-3. API call via `background.js` → MiniMax API
-4. Response parsed by `PromptEngine.parseAction()` → if action found, execute via `ToolRegistry`
-5. Tool sends `BROWSER_ACTION` to `background.js` → delegates to `content.js`
-6. Result fed back as context → loop continues until `done` action or max steps
+3. Gets provider settings from `chrome.storage.local`
+4. API call via `background.js` → Provider API
+5. Response parsed by `PromptEngine.parseAction()` → if action found, execute via `ToolRegistry`
+6. Tool sends `BROWSER_ACTION` to `background.js` → delegates to `content.js`
+7. Result fed back as context → loop continues until `done` action or max steps
 
 ## Key Constants
 
 **memory.js:**
-- `MAX_FACTS = 60` — max stored memory facts
-- `MAX_SESSIONS = 20` — max saved sessions
-- `MAX_MSGS_PER_SESSION = 100` — max messages per session
+- `MAX_FACTS = 60`
+- `MAX_SESSIONS = 20`
+- `MAX_MSGS_PER_SESSION = 100`
 
 **sidebar.js:**
-- `MAX_HISTORY_TURNS = 20` — turns sent to API per request
-- `MAX_AGENT_STEPS = 25` — max actions per agent loop
+- `MAX_HISTORY_TURNS = 20`
+- `MAX_AGENT_STEPS = 25`
 
 **background.js:**
 - API timeout: 60s
@@ -91,8 +104,9 @@ All persistence via `chrome.storage.local`:
 - `agent_sessions` — `{ [id]: Session }`
 - `agent_active_session` — session id string
 - `agent_memory` — `MemoryFact[]`
-- `minimax_api_key` — API key
-- `minimax_model` — selected model
+- `selected_provider` — "minimax" or "gemini"
+- `minimax_api_key` & `minimax_model`
+- `gemini_api_key` & `gemini_model`
 - `agent_mode` — current PromptEngine mode
 - `custom_instructions` — user's custom prompt additions
 
@@ -100,7 +114,7 @@ All persistence via `chrome.storage.local`:
 
 - `background.js` validates `sender.origin` on all messages
 - URL navigation restricted to `http:` and `https:` only
-- API key checked before use
+- API keys checked before use
 - 60s timeout on all API calls via AbortController
 - `evaluate_js` blocks dangerous patterns (fetch, XMLHttpRequest, eval, chrome.*, document.cookie)
 - All AI output rendered with HTML escaping (no raw innerHTML)

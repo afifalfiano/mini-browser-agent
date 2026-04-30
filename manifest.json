@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "MiniMax Browser Agent",
-  "version": "2.0.0",
-  "description": "AI browser agent powered by MiniMax — reads pages, clicks elements, takes screenshots, and more.",
+  "version": "2.1.0",
+  "description": "AI browser agent powered by MiniMax \u2014 reads pages, clicks elements, takes screenshots, and more.",
   "permissions": [
     "storage",
     "activeTab",
