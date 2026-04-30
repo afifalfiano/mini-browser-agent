@@ -1,0 +1,20 @@
+{
+  "name": "minimax-browser-agent",
+  "version": "1.0.0",
+  "description": "A Chrome extension that embeds an AI-powered sidebar to control your browser — navigate pages, click elements, fill forms, take screenshots, and chat with full memory across sessions.",
+  "main": "background.js",
+  "directories": {
+    "lib": "lib"
+  },
+  "type": "module",
+  "scripts": {
+    "test:e2e": "node test-e2e.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "dotenv": "^17.4.2",
+    "puppeteer": "^24.42.0"
+  }
+}
