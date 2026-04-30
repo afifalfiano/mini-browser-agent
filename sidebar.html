@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!--
+    Content Security Policy:
+    - default-src 'self'               → only load resources from this extension
+    - script-src 'self'                → no inline scripts, no eval
+    - style-src 'self' 'unsafe-inline' → allow inline styles (needed for dynamic height)
+    - img-src 'self' data:             → allow data: URIs for screenshots
+    - connect-src https://api.minimaxi.chat → only our API endpoint
+  -->
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src https://api.minimaxi.chat;" />
+  <title>MiniMax Agent</title>
+  <link rel="stylesheet" href="sidebar.css" />
+</head>
+<body>
+
+  <!-- Setup Screen -->
+  <div id="setup-screen" class="screen">
+    <div class="setup-inner">
+      <div class="logo">
+        <div class="logo-mark" aria-hidden="true">M</div>
+        <div>
+          <div class="logo-text">MiniMax Agent</div>
+          <div class="logo-sub">Browser AI Assistant</div>
+        </div>
+      </div>
+      <p class="setup-desc">Enter your MiniMax API key to start using the browser agent.</p>
+      <div class="input-group">
+        <label for="api-key-input">API Key</label>
+        <input type="password" id="api-key-input" placeholder="Your API token..."
+          autocomplete="off" spellcheck="false" />
+      </div>
+      <div class="input-group">
+        <label for="model-select">Model</label>
+        <select id="model-select">
+          <option value="MiniMax-M2.7" selected>MiniMax-M2.7</option>
+        </select>
+      </div>
+      <button id="save-btn" class="btn-primary">Save &amp; Start</button>
+    </div>
+  </div>
+
+  <!-- Chat Screen -->
+  <div id="chat-screen" class="screen hidden">
+    <header class="chat-header">
+      <div class="header-left">
+        <div class="logo-mark small" aria-hidden="true">M</div>
+        <div class="header-info">
+          <span class="header-title">MiniMax Agent</span>
+          <span class="header-model" id="header-model">MiniMax-M2.7</span>
+        </div>
+      </div>
+      <div class="header-actions" role="toolbar" aria-label="Toolbar">
+        <!-- Mode selector -->
+        <select id="mode-selector" class="mode-select" title="Agent mode" aria-label="Agent mode">
+          <option value="agent">🤖 Agent</option>
+        </select>
+        <button id="inspector-btn" class="icon-btn" title="Tool Inspector" aria-label="Tool Inspector">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+        </button>
+        <button id="screenshot-btn" class="icon-btn" title="Take a screenshot of this page" aria-label="Screenshot">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+        </button>
+        <button id="read-page-btn" class="icon-btn" title="Read active page" aria-label="Read page">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+        </button>
+        <button id="clear-btn" class="icon-btn" title="Clear chat" aria-label="Clear chat">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+        </button>
+        <button id="settings-btn" class="icon-btn" title="Settings" aria-label="Settings">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06-.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Highlight toast -->
+    <div id="highlight-toast" class="highlight-toast hidden" role="status" aria-live="polite">
+      <span id="highlight-preview"></span>
+      <button id="ask-highlight-btn" class="toast-btn">Ask AI about this →</button>
+    </div>
+
+    <!-- Task Progress -->
+    <div id="task-progress" class="task-progress hidden"></div>
+
+    <!-- Chat Panel -->
+    <div id="chat-panel">
+      <div id="messages" class="messages" role="log" aria-live="polite" aria-label="Conversation">
+        <div class="welcome-msg">
+          <div class="welcome-icon" aria-hidden="true">🤖</div>
+          <p><strong>MiniMax Browser Agent</strong></p>
+          <p>I can read pages, click elements, navigate URLs, fill forms, manage tabs, and more. Try typing:</p>
+          <div class="suggestions" role="list">
+            <button class="suggestion-chip" data-prompt="Read and summarize this page" role="listitem">📄 Summarize this page</button>
+            <button class="suggestion-chip" data-prompt="Take a screenshot of this page" role="listitem">📸 Screenshot</button>
+            <button class="suggestion-chip" data-prompt="Open youtube.com in a new tab" role="listitem">🌐 Open YouTube</button>
+            <button class="suggestion-chip" data-prompt="List all open tabs" role="listitem">📑 List tabs</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="input-area">
+        <div class="input-wrapper">
+          <label for="chat-input" class="sr-only">Message</label>
+          <textarea id="chat-input" placeholder="Type a command or question..."
+            rows="1" maxlength="4000" aria-label="Message"></textarea>
+          <button id="send-btn" class="send-btn" disabled aria-label="Send message">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          </button>
+        </div>
+        <div class="input-footer">
+          <p class="input-hint">Enter to send · Shift+Enter for new line</p>
+          <button id="stop-btn" class="stop-btn hidden" aria-label="Stop agent">⛔ Stop</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Inspector Panel -->
+    <div id="inspector-panel" class="inspector-panel hidden"></div>
+  </div>
+
+  <!-- Scripts: order matters -->
+  <script src="config.js"></script>
+  <script src="memory.js"></script>
+  <script src="tools-registry.js"></script>
+  <script src="tools/navigate.js"></script>
+  <script src="tools/interact.js"></script>
+  <script src="tools/read-page.js"></script>
+  <script src="tools/screenshot.js"></script>
+  <script src="tools/dom-query.js"></script>
+  <script src="tools/wait.js"></script>
+  <script src="tools/evaluate.js"></script>
+  <script src="tools/tab-manager.js"></script>
+  <script src="prompt-engine.js"></script>
+  <script src="sidebar.js"></script>
+</body>
+</html>
