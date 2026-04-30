@@ -491,6 +491,35 @@ body {
   color: #f87171;
   border-radius: var(--radius-sm);
   font-size: 12px;
+  flex-wrap: wrap;
+}
+
+/* Retry button inside error messages */
+.retry-btn {
+  margin-left: auto;
+  flex-shrink: 0;
+  background: rgba(251,146,60,0.15);
+  border: 1px solid rgba(251,146,60,0.4);
+  color: #fb923c;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s;
+}
+.retry-btn:hover {
+  background: rgba(251,146,60,0.28);
+  border-color: #fb923c;
+  transform: translateY(-1px);
+}
+.retry-btn:active { transform: scale(0.97); }
+.retry-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
 }
 
 .msg-screenshot {

@@ -711,8 +711,8 @@ function buildWelcomeMsg(subtitle) {
   return div;
 }
 
-// ── Append error ──
-function appendError(text) {
+// ── Append error (with optional retry button) ──
+function appendError(text, onRetry) {
   const div = document.createElement("div");
   div.className = "msg msg-error";
   const icon = document.createElement("span");
@@ -721,6 +721,20 @@ function appendError(text) {
   content.textContent = text;
   div.appendChild(icon);
   div.appendChild(content);
+
+  if (typeof onRetry === "function") {
+    const retryBtn = document.createElement("button");
+    retryBtn.className = "retry-btn";
+    retryBtn.title = "Retry the last failed step and continue the task";
+    retryBtn.textContent = "↩ Retry";
+    retryBtn.addEventListener("click", () => {
+      retryBtn.disabled = true;
+      retryBtn.textContent = "⏳ Retrying...";
+      onRetry();
+    });
+    div.appendChild(retryBtn);
+  }
+
   messagesEl.appendChild(div);
   messagesEl.scrollTop = messagesEl.scrollHeight;
 }
@@ -759,18 +773,27 @@ function appendAssistantMsg(text) {
   const div = document.createElement("div");
   div.className = "msg msg-assistant";
 
-  // Render text safely — convert newlines to <br> but escape HTML
-  const safe = text
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/```action\s*\{.*?\}\s*```/gs, (match) => {
-      // Dim the action block in display
-      return `<span class="action-block">${match.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</span>`;
-    })
-    .replace(/\n/g, "<br>");
+  // Security: build content with DOM API to prevent XSS.
+  // Action blocks get a <span> for dim styling; all other text uses textContent.
+  const actionBlockPattern = /```(?:action|json)\s*\{.*?\}\s*```/gs;
+  const parts = text.split(actionBlockPattern);
+  const actionBlocks = text.match(actionBlockPattern) || [];
 
-  div.innerHTML = safe;
+  parts.forEach((part, idx) => {
+    // Split each text chunk by newline, insert <br> between lines
+    part.split('\n').forEach((line, lineIdx) => {
+      if (lineIdx > 0) div.appendChild(document.createElement("br"));
+      if (line) div.appendChild(document.createTextNode(line));
+    });
+    // After each text part, insert the matching action block (if any)
+    if (actionBlocks[idx]) {
+      const span = document.createElement("span");
+      span.className = "action-block";
+      span.textContent = actionBlocks[idx]; // textContent auto-escapes — XSS safe
+      div.appendChild(span);
+    }
+  });
+
   messagesEl.appendChild(div);
   messagesEl.scrollTop = messagesEl.scrollHeight;
   return div;
@@ -788,14 +811,15 @@ function updateTaskProgressUI() {
   }
 
   taskProgress.classList.remove("hidden");
+  // Security: escape plan.goal and step text to prevent HTML injection from AI responses
   const stepsHtml = plan.steps.map((s) => {
     const icon = s.status === "done" ? "✅" : s.status === "running" ? "🔄" : s.status === "failed" ? "❌" : "⬜";
-    const cls = `task-step task-step-${s.status}`;
-    return `<div class="${cls}">${icon} ${s.text}</div>`;
+    const cls = `task-step task-step-${_escapeHtml(s.status)}`;
+    return `<div class="${cls}">${icon} ${_escapeHtml(s.text)}</div>`;
   }).join("");
 
   taskProgress.innerHTML = `
-    <div class="task-goal"><strong>🎯 ${plan.goal}</strong></div>
+    <div class="task-goal"><strong>🎯 ${_escapeHtml(plan.goal)}</strong></div>
     ${stepsHtml}
   `;
 }
@@ -839,6 +863,7 @@ async function runAgentLoop(initialPrompt) {
   const MAX_RETRY = 3;
   let contextUpdate = null;
   let isInitialMessage = true;
+  let _loopEndedWithError = false; // track if loop ended due to error vs normal completion
 
   setWorkingFrame(true);
 
@@ -948,6 +973,29 @@ async function runAgentLoop(initialPrompt) {
       // Handle done action
       if (action.type === "done") {
         appendActionStatus(action.summary || "Task complete ✅", "done");
+
+        // Take a final screenshot for the UI
+        let _finalScreenshot = null;
+        await sleep(800); // Wait for page to settle
+        try {
+          const ssRes = await sendToBackground({ type: "TAKE_SCREENSHOT" });
+          if (ssRes && ssRes.success) {
+            appendScreenshot(ssRes.dataUrl);
+            _finalScreenshot = ssRes.dataUrl;
+          }
+        } catch (e) {
+          console.warn("Failed to capture final screenshot", e);
+        }
+
+        if (typeof SessionRecorder !== "undefined") {
+          SessionRecorder.recordStep({
+            stepNum: stepCount, action: "done", params: action,
+            result: null, success: true, errorMessage: null,
+            duration: Date.now() - (_stepStart || Date.now())
+          });
+          if (_finalScreenshot) SessionRecorder.addScreenshot(stepCount, _finalScreenshot);
+        }
+        
         break;
       }
 
@@ -1081,6 +1129,7 @@ async function runAgentLoop(initialPrompt) {
 
         contextUpdate = `[Action ${action.type} error]: ${e.message}`;
         conversationHistory.push({ role: "user", content: contextUpdate });
+        _loopEndedWithError = true;
         if (typeof SessionRecorder !== "undefined") {
           SessionRecorder.recordStep({
             stepNum: stepCount, action: action.type, params: action,
@@ -1092,18 +1141,34 @@ async function runAgentLoop(initialPrompt) {
 
     } catch (err) {
       statusDiv.remove();
-      appendError(err.message || String(err));
+      _loopEndedWithError = true;
+      appendError(err.message || String(err), () => {
+        chatInput.value = "Please continue the task. Retry the last failed step using a different approach if needed.";
+        sendMessage();
+      });
       break;
     }
   }
 
   if (stepCount >= MAX_AGENT_STEPS) {
-    appendError(`Agent reached maximum steps (${MAX_AGENT_STEPS}). Stopping.`);
+    appendError(`Agent reached maximum steps (${MAX_AGENT_STEPS}). Stopping.`, () => {
+      chatInput.value = "Please continue the task from where you left off.";
+      sendMessage();
+    });
+  } else if (_loopEndedWithError && !stopRequested) {
+    // Show retry on error exit (but not on user stop or normal done)
+    const lastErr = conversationHistory.slice().reverse().find(m => m.role === "user" && m.content.startsWith("[Action"));
+    if (lastErr) {
+      appendError("Task ended due to an error. You can retry to continue.", () => {
+        chatInput.value = "Please continue the task. Try a different approach for the step that failed.";
+        sendMessage();
+      });
+    }
   }
 
   // Finish recording and show download button
   if (typeof SessionRecorder !== "undefined") {
-    SessionRecorder.end();
+    SessionRecorder.end(conversationHistory);
     if (downloadBtn && SessionRecorder.hasData()) {
       downloadBtn.classList.remove("hidden");
       downloadBtn.textContent = `📦 Download Report (${SessionRecorder.getSession()?.steps?.length ?? 0} steps)`;

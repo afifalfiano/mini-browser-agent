@@ -16,8 +16,13 @@ const SessionRecorder = (() => {
     return _session;
   }
 
-  function end() {
-    if (_session) _session.endTime = new Date();
+  function end(conversation) {
+    if (_session) {
+      _session.endTime = new Date();
+      if (conversation) {
+        _session.conversation = conversation;
+      }
+    }
   }
 
   function clear() { _session = null; }
@@ -198,7 +203,12 @@ h1{font-size:22px;font-weight:700;color:#fff;margin-bottom:6px}
     };
     zip.add(`${prefix}/data.json`, JSON.stringify(jsonData, null, 2), _session.startTime);
 
-    // 3. Screenshots as PNG files
+    // 3. Conversation history
+    if (_session.conversation && _session.conversation.length > 0) {
+      zip.add(`${prefix}/conversation.json`, JSON.stringify(_session.conversation, null, 2), _session.startTime);
+    }
+
+    // 4. Screenshots as PNG files
     for (const step of _session.steps) {
       if (!step.screenshotDataUrl) continue;
       try {

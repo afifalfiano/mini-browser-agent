@@ -144,10 +144,29 @@ const ToolRegistry = (() => {
 
     const lines = visible.map((t) => {
       const example = _schemaToExample(t.inputSchema, t.name);
-      return `\`\`\`action\n${JSON.stringify(example, null, 2)}\n\`\`\`\n${t.description}`;
+      return `• **${t.name}** — ${t.description}\n  Example:\n  \`\`\`action\n  ${JSON.stringify(example)}\n  \`\`\``;
     });
 
-    return `\nAVAILABLE ACTIONS (use JSON in triple backticks tagged "action"):\n\n${lines.join("\n\n")}`;
+    return `
+ACTION FORMAT — CRITICAL RULES:
+To execute a browser action, output EXACTLY this format (and nothing else for that action):
+
+\`\`\`action
+{"type": "navigate", "url": "https://example.com"}
+\`\`\`
+
+RULES:
+1. The block must start with \`\`\`action and end with \`\`\` — no other delimiters.
+2. The JSON must be valid — double-quoted keys and strings, no trailing commas.
+3. The "type" field must exactly match one of the tool names below.
+4. Output ONE action block per reply. Wait for the result before the next action.
+5. ❌ NEVER use formats like [TOOL_CALL], <tool>, XML tags, or any other syntax.
+6. ❌ NEVER invent tool names not in the list below.
+7. When the task is fully complete, use: \`\`\`action\n{"type": "done", "summary": "..."}\n\`\`\`
+
+AVAILABLE TOOLS:
+
+${lines.join("\n\n")}`;
   }
 
   /**

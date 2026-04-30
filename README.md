@@ -20,13 +20,30 @@ A Chrome extension that embeds an AI-powered sidebar to control your browser —
 ## Project Structure
 
 ```
-├── manifest.json       # Chrome Extension manifest (MV3)
-├── background.js       # Service worker — API calls, tab control, screenshot
-├── content.js          # Injected into every page — DOM reading, clicking, scrolling
-├── memory.js           # Session manager + memory bank (loaded before sidebar.js)
-├── sidebar.html        # Side panel UI
-├── sidebar.js          # Side panel logic — chat, actions, session/memory integration
-├── sidebar.css         # Side panel styles
+├── manifest.json           # Chrome Extension manifest (MV3)
+├── background.js           # Service worker — API calls, tab control, screenshot
+├── content.js              # Injected into every page — DOM reading, clicking, scrolling
+├── memory.js               # Session manager + memory bank (loaded before sidebar.js)
+├── sidebar.html            # Side panel UI
+├── sidebar.js              # Side panel logic — chat, agent loop, inspector
+├── sidebar.css             # Side panel styles
+├── prompt-engine.js        # System prompt builder, action parser, mode manager
+├── tools-registry.js       # Central tool registry & event bus
+├── tools/
+│   ├── navigate.js         # navigate, new_tab, go_back, go_forward, reload
+│   ├── interact.js         # click, fill_input, hover, scroll, scroll_to, select_option
+│   ├── read-page.js        # read_page, get_url
+│   ├── screenshot.js       # screenshot, download_screenshot
+│   ├── dom-query.js        # query_elements, get_element_info, get_form_data, count_elements
+│   ├── evaluate.js         # evaluate_js (sandboxed), extract_data
+│   ├── wait.js             # wait_for_element, wait_for_navigation, sleep
+│   └── tab-manager.js      # list_tabs, switch_tab, close_tab
+├── providers/
+│   ├── base.js             # ProviderManager — abstract API layer
+│   └── minimax.js          # MiniMax API implementation
+├── session-recorder.js     # Step-by-step session logger + ZIP exporter
+├── lib/
+│   └── zip-builder.js      # Pure-JS ZIP builder (no external deps)
 └── icons/
     ├── icon16.png
     ├── icon48.png
@@ -88,9 +105,35 @@ You can ask the AI in plain language:
 "Read and summarize this page"
 "Take a screenshot"
 "Fill in the search box with 'MiniMax AI'"
+"List all open tabs"
+"Extract all product names and prices from this page"
+"Wait until the loading spinner disappears"
 ```
 
 ---
+
+## Agent Modes
+
+Switch modes via the dropdown in the sidebar header:
+
+| Mode | Icon | Best For |
+|---|---|---|
+| **Agent** | 🤖 | Multi-step autonomous tasks (default) |
+| **Reader** | 📖 | Summarizing articles and extracting info without side effects |
+| **Form Filler** | 📝 | Filling and reviewing web forms step by step |
+| **Researcher** | 🔬 | Cross-tab research with source citations |
+
+---
+
+## Tool Inspector
+
+Click the 🔧 wrench icon in the header to open the **Tool Inspector** panel:
+
+- View all registered tools with their parameter schemas
+- Execute any tool manually from the UI
+- See a live **Event Timeline** of every tool call and its result
+- Run **Page Analysis** to get tool recommendations for the current page
+- Export all tool definitions as a JSON schema file
 
 ## Memory System
 
@@ -115,14 +158,21 @@ Each conversation is a named session saved to local storage:
 
 ## Security
 
+This extension is designed with a defense-in-depth approach to protect both the user and the pages they visit.
+
 | Measure | Detail |
 |---|---|
-| Content Security Policy | `script-src 'self'` — no inline scripts, no eval, no external scripts |
-| URL validation | Only `http:` and `https:` URLs are allowed for navigation |
-| Sender validation | Background script checks `sender.id` on all messages |
-| No external CDN | Fonts and assets are system-local — no outbound requests except the API |
-| Safe rendering | All AI output rendered via DOM `textContent` — no `innerHTML` |
-| API timeout | 30-second abort controller on every API request |
+| **Content Security Policy** | `script-src 'self'` — no inline scripts, no eval, no external scripts |
+| **URL validation** | Only `http:` and `https:` are allowed for navigation; `javascript:`, `data:`, `file:` are rejected |
+| **Sender validation** | Background script checks `sender.id` on all runtime messages |
+| **Origin check** | Messages from outside the extension origin are rejected with an error |
+| **DOM-only rendering** | All AI output and UI text is built via `createTextNode` / `textContent` — no `innerHTML` with untrusted data |
+| **`evaluate_js` hardened** | 30+ blocked patterns including `globalThis`, `self.`, `top.`, `atob()`, `__proto__`, prototype access, and obfuscation escapes. Hard 500-char length cap. |
+| **Prompt injection mitigation** | Page content is wrapped with explicit UNTRUSTED DATA delimiters in the system prompt. Common injection phrases (`IGNORE INSTRUCTIONS`, `[SYSTEM]`, etc.) are stripped before being sent to the AI. |
+| **No external CDN** | Fonts and assets are system-local — no outbound requests except the configured AI API |
+| **API timeout** | 30-second abort controller on every API request |
+
+> **Privacy Note:** Page text content, interactive elements, and screenshots are sent to the MiniMax API (or other configured provider) as part of the AI request. Do not use this extension on pages containing passwords, financial data, or other highly sensitive personal information.
 
 ---
 

@@ -13,7 +13,10 @@ if (typeof ProviderManager === "undefined") {
       }
 
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 60_000); // 60s timeout
+      const timeoutId = setTimeout(
+        () => controller.abort(new DOMException("MiniMax API request timed out after 60 seconds. The server may be slow or the task is too complex.", "TimeoutError")),
+        60_000
+      );
 
       try {
         const response = await fetch("https://api.minimaxi.chat/v1/text/chatcompletion_v2", {

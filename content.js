@@ -423,15 +423,43 @@ function resolveElement(label, selector, text) {
     } catch {}
   }
 
-  // Try text matching
+  // Try text matching — broad search for SPA compatibility
   if (text) {
-    const all = document.querySelectorAll(
-      "button, a, [role='button'], [onclick], input[type='submit'], [role='tab'], [role='menuitem']"
-    );
-    const needle = text.toLowerCase();
+    // Expand the search scope to include nav items, list items, and any clickable element
+    const searchScope = [
+      "a", "button",
+      "[role='button']", "[role='tab']", "[role='menuitem']", "[role='link']", "[role='option']",
+      "[onclick]", "input[type='submit']", "input[type='button']",
+      "nav li", "li a", "li button",
+      "[tabindex]:not([tabindex='-1'])"
+    ];
+    const all = document.querySelectorAll(searchScope.join(","));
+    const needle = text.toLowerCase().trim();
+
+    // Pass 1: exact text match (faster and more accurate)
     for (const candidate of all) {
+      if (!isElementVisible(candidate)) continue;
+      const candidateText = getElementText(candidate).toLowerCase().trim();
+      if (candidateText === needle) return candidate;
+    }
+
+    // Pass 2: check aria-label and title attributes (common in SPAs)
+    for (const candidate of all) {
+      if (!isElementVisible(candidate)) continue;
+      const ariaLabel = (candidate.getAttribute("aria-label") || "").toLowerCase();
+      const title = (candidate.getAttribute("title") || "").toLowerCase();
+      if (ariaLabel === needle || title === needle) return candidate;
+    }
+
+    // Pass 3: partial text includes (most lenient)
+    for (const candidate of all) {
+      if (!isElementVisible(candidate)) continue;
       const candidateText = getElementText(candidate).toLowerCase();
-      if (candidateText.includes(needle)) return candidate;
+      const ariaLabel = (candidate.getAttribute("aria-label") || "").toLowerCase();
+      const title = (candidate.getAttribute("title") || "").toLowerCase();
+      if (candidateText.includes(needle) || ariaLabel.includes(needle) || title.includes(needle)) {
+        return candidate;
+      }
     }
   }
 
@@ -443,11 +471,20 @@ async function clickElement(selector, text, label) {
   const el = resolveElement(label, selector, text);
 
   if (!el) {
-    return { success: false, error: `Element not found: label=${label}, selector="${selector}", text="${text}"` };
+    return {
+      success: false,
+      error: `Element not found: label=${label}, selector="${selector}", text="${text}". Tip: use navigate with a direct URL instead, or try read_page first to get element labels.`
+    };
   }
 
   showActionIndicator(el, "clicking");
+  el.scrollIntoView({ behavior: "smooth", block: "center" });
   await sleep(300);
+
+  // Dispatch full mouse event sequence for SPA frameworks (React, Vue, etc.)
+  el.dispatchEvent(new MouseEvent("mouseover", { bubbles: true }));
+  el.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
+  el.dispatchEvent(new MouseEvent("mouseup",   { bubbles: true }));
   el.click();
 
   return { success: true, element: el.tagName, text: getElementText(el).slice(0, 50) };
@@ -643,13 +680,40 @@ function countElements(selector) {
 // ── Evaluate JS ──
 async function evaluateJS(expression) {
   // Security: block dangerous patterns (enhanced)
+  // NOTE: Blocklist approach; prefer whitelist for true sandboxing.
   const blocked = [
-    "fetch(", "XMLHttpRequest", "eval(", "Function(", "import(", 
-    "chrome.", "document.cookie", "localStorage", "sessionStorage",
-    "indexedDB", "location.href =", "location.assign", "location.replace",
-    "window.open", "\\x", "\\u" // Block hex/unicode escapes used for obfuscation
+    // Network
+    "fetch(", "xmlhttprequest", "navigator.sendbeacon",
+    // Code execution
+    "eval(", "function(", "import(", "settimeout(", "setinterval(",
+    "new function", "(0,eval)", "[`eval`]",
+    // Chrome extension APIs
+    "chrome.",
+    // Sensitive storage & cookies
+    "document.cookie", "localstorage", "sessionstorage",
+    "indexeddb", "caches.", "serviceworker",
+    // Navigation hijacking
+    "location.href =", "location.assign", "location.replace",
+    "location.reload", "history.push", "history.replace",
+    // Window abuse
+    "window.open", "window.close",
+    // Global object bypasses
+    "globalthis", "self.", "top.", "parent.", "frames[",
+    // Encoding obfuscation
+    "\\x", "\\u", "atob(", "btoa(",
+    // Sensitive DOM reads
+    "document.forms", "document.body.innerhtml", "document.documentelement",
+    // Prototype pollution
+    "__proto__", "constructor[", ".constructor",
+    // Node.js/Worker globals that may exist
+    "require(", "process.", "module."
   ];
-  
+
+  // Hard length cap to prevent obfuscation via very long strings
+  if (!expression || typeof expression !== "string" || expression.length > 500) {
+    return { success: false, error: "Expression too long or invalid" };
+  }
+
   const lowerExpr = expression.toLowerCase();
   for (const pattern of blocked) {
     if (lowerExpr.includes(pattern.toLowerCase())) {
@@ -736,11 +800,24 @@ function showNavigatingIndicator(url) {
     alignItems: "center", justifyContent: "center",
     gap: "12px", fontFamily: "system-ui, sans-serif"
   });
-  overlay.innerHTML = `
-    <div style="font-size:36px;animation:__ai_ring_pulse__ 1s ease-in-out infinite;">🌐</div>
-    <div style="color:#e2e2ee;font-size:15px;font-weight:600;">Navigating...</div>
-    <div style="color:#888899;font-size:12px;max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${url}</div>
-  `;
+
+  // Security: build overlay with DOM API, not innerHTML, to prevent XSS via malicious URLs
+  const iconEl = document.createElement("div");
+  Object.assign(iconEl.style, { fontSize: "36px", animation: "__ai_ring_pulse__ 1s ease-in-out infinite" });
+  iconEl.textContent = "🌐";
+
+  const labelEl = document.createElement("div");
+  Object.assign(labelEl.style, { color: "#e2e2ee", fontSize: "15px", fontWeight: "600" });
+  labelEl.textContent = "Navigating...";
+
+  const urlEl = document.createElement("div");
+  Object.assign(urlEl.style, { color: "#888899", fontSize: "12px", maxWidth: "320px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" });
+  urlEl.textContent = url; // textContent auto-escapes — safe against XSS
+
+  overlay.appendChild(iconEl);
+  overlay.appendChild(labelEl);
+  overlay.appendChild(urlEl);
+
   const s = document.createElement("style");
   s.textContent = "@keyframes __ai_ring_pulse__ { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.7;transform:scale(1.08)} }";
   document.head.appendChild(s);
