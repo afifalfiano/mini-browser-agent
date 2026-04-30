@@ -725,12 +725,23 @@ function showActionIndicator(el, label) {
   Object.assign(box.style, {
     position: "fixed",
     zIndex: "2147483646",
-    border: "3px solid #6c63ff",
-    backgroundColor: "rgba(108,99,255,0.1)",
+    border: "3px solid #a855f7",
+    backgroundColor: "rgba(168, 85, 247, 0.15)",
     borderRadius: "4px",
     pointerEvents: "none",
+    animation: "__ai_box_pulse__ 0.8s ease-in-out infinite alternate",
     transition: "all 0.2s ease"
   });
+
+  const style = document.createElement("style");
+  style.id = "__ai_ring_style__";
+  style.textContent = `
+    @keyframes __ai_box_pulse__ {
+      0% { transform: scale(1); box-shadow: 0 0 0px rgba(168, 85, 247, 0); }
+      100% { transform: scale(1.02); box-shadow: 0 0 15px rgba(168, 85, 247, 0.5); }
+    }
+  `;
+  document.head.appendChild(style);
   box.style.top = (rect.top || 0) + "px";
   box.style.left = (rect.left || 0) + "px";
   box.style.width = (rect.width || 0) + "px";
@@ -744,7 +755,7 @@ function showActionIndicator(el, label) {
   Object.assign(ring.style, {
     position: "fixed",
     zIndex: "2147483647",
-    background: "rgba(108,99,255,0.95)",
+    background: "rgba(168, 85, 247, 0.95)",
     color: "#fff",
     borderRadius: "6px",
     padding: "4px 10px",
@@ -813,8 +824,8 @@ function toggleWorkingFrame(active) {
         bottom: "0",
         zIndex: 2147483645,
         pointerEvents: "none",
-        border: "5px solid rgba(108, 99, 255, 0.7)",
-        boxShadow: "inset 0 0 30px rgba(108, 99, 255, 0.4)",
+        border: "6px solid rgba(168, 85, 247, 0.7)",
+        boxShadow: "inset 0 0 40px rgba(168, 85, 247, 0.4)",
         transition: "all 0.3s ease"
       });
       document.body.appendChild(frame);
