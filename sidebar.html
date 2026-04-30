@@ -12,8 +12,8 @@
     - connect-src https://api.minimaxi.chat → only our API endpoint
   -->
   <meta http-equiv="Content-Security-Policy"
-    content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src https://api.minimaxi.chat https://generativelanguage.googleapis.com;" />
-  <title>MiniMax Agent</title>
+    content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src https://api.minimaxi.chat;" />
+  <title>Mini Agent</title>
   <link rel="stylesheet" href="sidebar.css" />
 </head>
 <body>
@@ -24,7 +24,7 @@
       <div class="logo">
         <div class="logo-mark" aria-hidden="true">M</div>
         <div>
-          <div class="logo-text">MiniMax Agent</div>
+          <div class="logo-text">Mini Agent</div>
           <div class="logo-sub">Browser AI Assistant</div>
         </div>
       </div>
@@ -33,7 +33,6 @@
         <label for="provider-select">Provider</label>
         <select id="provider-select">
           <option value="minimax" selected>MiniMax</option>
-          <option value="gemini">Google Gemini</option>
         </select>
       </div>
       <div class="input-group">
@@ -61,7 +60,7 @@
       <div class="header-left">
         <div class="logo-mark small" aria-hidden="true">M</div>
         <div class="header-info">
-          <span class="header-title">MiniMax Agent</span>
+          <span class="header-title">Mini Browser Agent</span>
           <span class="header-model" id="header-model">MiniMax-M2.7</span>
         </div>
       </div>
@@ -133,7 +132,6 @@
   
   <script src="providers/base.js"></script>
   <script src="providers/minimax.js"></script>
-  <script src="providers/gemini.js"></script>
 
   <script src="tools-registry.js"></script>
   <script src="tools/navigate.js"></script>

@@ -1,4 +1,4 @@
-// sidebar.js — MiniMax Browser Agent (Refactored with ToolRegistry + PromptEngine)
+// sidebar.js — Mini Browser Agent (Refactored with ToolRegistry + PromptEngine)
 
 // ── DOM refs ──
 const setupScreen      = document.getElementById("setup-screen");
@@ -36,18 +36,18 @@ const MAX_HISTORY_TURNS = 20;
 const MAX_AGENT_STEPS   = 25;
 
 // ── Init ──
-chrome.storage.local.get(["selected_provider", "minimax_api_key", "minimax_model", "gemini_api_key", "gemini_model", "agent_mode", "custom_instructions"], (data) => {
+chrome.storage.local.get(["selected_provider", "minimax_api_key", "minimax_model", "agent_mode", "custom_instructions"], (data) => {
   if (chrome.runtime.lastError) {
     console.error("[Sidebar] Storage read error:", chrome.runtime.lastError.message);
     return;
   }
   
   const provider = data.selected_provider || "minimax";
-  const hasKey = provider === "minimax" ? !!data.minimax_api_key : !!data.gemini_api_key;
-  const model = provider === "minimax" ? data.minimax_model : data.gemini_model;
+  const hasKey = !!data.minimax_api_key;
+  const model = data.minimax_model;
 
   if (hasKey) {
-    showChatScreen(model || (provider === "minimax" ? "MiniMax-M2.7" : "gemini-2.5-flash"));
+    showChatScreen(model || "MiniMax-M2.7");
   } else {
     // Populate setup screen
     providerSelect.value = provider;
@@ -562,18 +562,22 @@ askHighlightBtn.addEventListener("click", () => {
 
 // ── Setup screen ──
 function _updateModelOptions(provider) {
-  let models = [];
-  if (provider === "minimax") models = ["MiniMax-M2.7", "MiniMax-M2.7-Pro", "MiniMax-M2.5", "MiniMax-M2.5-Pro"];
-  else if (provider === "gemini") models = ["gemini-2.5-flash", "gemini-2.5-pro", "gemini-3.0-flash", "gemini-3.0-pro", "gemini-2.0-flash"];
+  let models = ["MiniMax-M2.7"];
   
-  modelSelect.innerHTML = models.map(m => `<option value="${m}">${m}</option>`).join("");
+  modelSelect.innerHTML = "";
+  models.forEach((m) => {
+    const opt = document.createElement("option");
+    opt.value = m;
+    opt.textContent = m;
+    modelSelect.appendChild(opt);
+  });
 }
 
 if (providerSelect) {
   providerSelect.addEventListener("change", () => {
     _updateModelOptions(providerSelect.value);
-    chrome.storage.local.get(["minimax_api_key", "gemini_api_key"], (data) => {
-      apiKeyInput.value = (providerSelect.value === "minimax" ? data.minimax_api_key : data.gemini_api_key) || "";
+    chrome.storage.local.get(["minimax_api_key"], (data) => {
+      apiKeyInput.value = data.minimax_api_key || "";
     });
   });
 }
@@ -589,9 +593,6 @@ saveBtn.addEventListener("click", () => {
   if (provider === "minimax") {
     payload.minimax_api_key = key;
     payload.minimax_model = model;
-  } else {
-    payload.gemini_api_key = key;
-    payload.gemini_model = model;
   }
 
   chrome.storage.local.set(payload, () => {
@@ -607,14 +608,14 @@ function showChatScreen(model) {
 }
 
 settingsBtn.addEventListener("click", () => {
-  chrome.storage.local.get(["selected_provider", "minimax_api_key", "minimax_model", "gemini_api_key", "gemini_model"], (data) => {
+  chrome.storage.local.get(["selected_provider", "minimax_api_key", "minimax_model"], (data) => {
     if (chrome.runtime.lastError) return;
     const provider = data.selected_provider || "minimax";
     if (providerSelect) providerSelect.value = provider;
     _updateModelOptions(provider);
     
-    apiKeyInput.value = (provider === "minimax" ? data.minimax_api_key : data.gemini_api_key) || "";
-    modelSelect.value = (provider === "minimax" ? data.minimax_model : data.gemini_model) || modelSelect.options[0].value;
+    apiKeyInput.value = data.minimax_api_key || "";
+    modelSelect.value = data.minimax_model || modelSelect.options[0].value;
   });
   chatScreen.classList.add("hidden");
   setupScreen.classList.remove("hidden");
@@ -691,7 +692,7 @@ function buildWelcomeMsg(subtitle) {
 
   div.innerHTML = `
     <div class="welcome-icon" aria-hidden="true">🤖</div>
-    <p><strong>MiniMax Browser Agent</strong></p>
+    <p><strong>Mini Browser Agent</strong></p>
     <p>${subtitle || `${toolCount} tools ready. I can read pages, click elements, navigate, fill forms, manage tabs, and more.`}</p>
     <div class="suggestions" role="list">
       <button class="suggestion-chip" data-prompt="Read and summarize this page" role="listitem">📄 Summarize this page</button>
@@ -880,12 +881,12 @@ async function runAgentLoop(initialPrompt) {
 
       // Get provider details
       const stored = await new Promise((resolve) => {
-        chrome.storage.local.get(["selected_provider", "minimax_api_key", "minimax_model", "gemini_api_key", "gemini_model"], resolve);
+        chrome.storage.local.get(["selected_provider", "minimax_api_key", "minimax_model"], resolve);
       });
       
       const provider = stored.selected_provider || "minimax";
-      const apiKey = provider === "minimax" ? stored.minimax_api_key : stored.gemini_api_key;
-      const model = provider === "minimax" ? stored.minimax_model : stored.gemini_model;
+      const apiKey = stored.minimax_api_key;
+      const model = stored.minimax_model;
 
       if (!apiKey) {
         throw new Error(`API key for ${provider} not configured. Click ⚙️ to set it.`);

@@ -3,8 +3,7 @@
 // ── Load Providers ──
 importScripts(
   "providers/base.js",
-  "providers/minimax.js",
-  "providers/gemini.js"
+  "providers/minimax.js"
 );
 // ── Allowed origins for message validation ──
 const EXTENSION_ORIGIN = chrome.runtime.getURL("").slice(0, -1);

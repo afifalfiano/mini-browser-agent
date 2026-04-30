@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to the **MiniMax Browser Agent** extension will be documented in this file.
+All notable changes to the **Mini Browser Agent** extension will be documented in this file.
 
 ## [2.1.0] - 2026-04-30
 ### Added

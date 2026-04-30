@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "MiniMax Browser Agent",
+  "name": "Mini Browser Agent",
   "version": "2.1.0",
   "description": "AI browser agent powered by MiniMax \u2014 reads pages, clicks elements, takes screenshots, and more.",
   "permissions": [
@@ -18,7 +18,7 @@
     "service_worker": "background.js"
   },
   "action": {
-    "default_title": "MiniMax Browser Agent",
+    "default_title": "Mini Browser Agent",
     "default_icon": {
       "16": "icons/icon16.png",
       "48": "icons/icon48.png",

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Chrome Extension (MV3) — AI browser agent powered by multiple providers (MiniMax, Gemini). Embeds a side panel with chat that controls the browser (navigate, click, fill forms, screenshots, page reading, tab management, DOM inspection).
+Chrome Extension (MV3) — AI browser agent. Embeds a side panel with chat that controls the browser (navigate, click, fill forms, screenshots, page reading, tab management, DOM inspection).
 
 ## No Build Step
 
@@ -31,10 +31,8 @@ sidebar.js          → Chat UI logic, agent loop, inspector panel, action handl
 sidebar.css         → Styles (including inspector panel, task progress, message types)
 config.js           → Default API key/model config
 
-providers/          → Multi-Provider AI Architecture
+providers/          → Provider Architecture
   base.js           → ProviderManager (central registry for AI providers)
-  minimax.js        → MiniMax API implementation
-  gemini.js         → Google Gemini API implementation
 
 tools/              → Individual tool modules (each registers with ToolRegistry on load)
   navigate.js       → navigate, new_tab, go_back, go_forward, reload
@@ -104,9 +102,8 @@ All persistence via `chrome.storage.local`:
 - `agent_sessions` — `{ [id]: Session }`
 - `agent_active_session` — session id string
 - `agent_memory` — `MemoryFact[]`
-- `selected_provider` — "minimax" or "gemini"
+- `selected_provider` — "minimax"
 - `minimax_api_key` & `minimax_model`
-- `gemini_api_key` & `gemini_model`
 - `agent_mode` — current PromptEngine mode
 - `custom_instructions` — user's custom prompt additions
 

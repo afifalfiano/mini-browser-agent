@@ -1,4 +1,4 @@
-# MiniMax Browser Agent - Agent Modes
+# Mini Browser Agent - Agent Modes
 
 This Browser Agent is equipped with several personas or **agent modes** designed specifically to handle various types of web scenarios. Each mode has different rules and a distinct persona to ensure tasks are completed more accurately.
 

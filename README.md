@@ -1,4 +1,4 @@
-# MiniMax Browser Agent
+# Mini Browser Agent
 
 A Chrome extension that embeds an AI-powered sidebar to control your browser — navigate pages, click elements, fill forms, take screenshots, and chat with full memory across sessions.
 
@@ -54,7 +54,7 @@ You don't need to publish to the Chrome Web Store to use this. Load it directly 
 
 ### Configure the API Key
 
-1. Click the **MiniMax Agent** icon in the Chrome toolbar (pin it first via the puzzle piece icon)
+1. Click the **Mini Agent** icon in the Chrome toolbar (pin it first via the puzzle piece icon)
 2. Enter your MiniMax API key in the setup screen
 3. Select your model and click **Simpan & Mulai**
 
@@ -133,7 +133,7 @@ Each conversation is a named session saved to local storage:
 After editing any file, reload the extension:
 
 1. Go to `chrome://extensions`
-2. Click the **↺ refresh** icon on the MiniMax Agent card
+2. Click the **↺ refresh** icon on the Mini Agent card
 
 ### Debugging
 
