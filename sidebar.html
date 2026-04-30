@@ -98,14 +98,14 @@
 
     <!-- Chat Panel -->
     <div id="chat-panel">
-      <div id="messages" class="messages" role="log" aria-live="polite" aria-label="Conversation">
+      <div id="messages" class="messages" role="log" aria-live="polite" aria-relevant="additions" aria-atomic="false" aria-label="Conversation history">
       </div>
 
       <div class="input-area">
         <div class="input-wrapper">
           <label for="chat-input" class="sr-only">Message</label>
           <textarea id="chat-input" placeholder="Type a command or question..."
-            rows="1" maxlength="4000" aria-label="Message"></textarea>
+            rows="1" maxlength="4000" aria-label="Your message"></textarea>
           <button id="send-btn" class="send-btn" disabled aria-label="Send message">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
           </button>

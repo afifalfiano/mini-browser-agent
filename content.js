@@ -28,7 +28,57 @@ function assignLabel(el) {
 }
 
 function getElementByLabel(label) {
-  return _labelMap.get(label) || null;
+  return _labelMap.get(Number(label)) || null;
+}
+
+// ── Check if element is in viewport ──
+function isElementInViewport(el) {
+  const rect = el.getBoundingClientRect();
+  return (
+    rect.top >= 0 &&
+    rect.left >= 0 &&
+    rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
+    rect.right <= (window.innerWidth || document.documentElement.clientWidth)
+  );
+}
+
+// ── Deep interactive element scanner (Shadow DOM & Iframes) ──
+function getDeepInteractiveElements(root = document, depth = 0, maxDepth = 5) {
+  if (depth > maxDepth) return [];
+  let elements = [];
+
+  // 1. Regular interactive elements in current root
+  const selectors = [
+    'button', 'a[href]', '[role="button"]', '[role="tab"]', '[role="menuitem"]',
+    'input:not([type="hidden"])', 'textarea', 'select',
+    '[onclick]', '[tabindex]:not([tabindex="-1"])',
+    'summary', 'details', '[contenteditable="true"]'
+  ];
+  
+  try {
+    const currentLevel = Array.from(root.querySelectorAll(selectors.join(',')));
+    elements.push(...currentLevel);
+  } catch (e) {}
+
+  // 2. Traverse Shadow DOM
+  const allNodes = root.querySelectorAll('*');
+  for (const node of allNodes) {
+    if (node.shadowRoot) {
+      elements.push(...getDeepInteractiveElements(node.shadowRoot, depth + 1, maxDepth));
+    }
+    // 3. Traverse Iframes (if accessible)
+    if (node.tagName === 'IFRAME') {
+      try {
+        if (node.contentDocument) {
+          elements.push(...getDeepInteractiveElements(node.contentDocument, depth + 1, maxDepth));
+        }
+      } catch (e) {
+        // Cross-origin iframe, skip
+      }
+    }
+  }
+
+  return elements;
 }
 
 // ── Listen for messages from background/sidebar ──
@@ -221,21 +271,29 @@ function getPageContent(options = {}) {
   if (mode === "full" || mode === "interactive") {
     result.labels = [];
 
-    // Buttons, links, clickable elements
-    const interactiveEls = document.querySelectorAll(
-      'button, a[href], [role="button"], [role="tab"], [role="menuitem"], ' +
-      'input:not([type="hidden"]), textarea, select, ' +
-      '[onclick], [tabindex]:not([tabindex="-1"]), ' +
-      'summary, details, [contenteditable="true"]'
-    );
+    // Deep scan for all interactive elements
+    const allInteractive = getDeepInteractiveElements();
+    
+    // Sort by: 1. Viewport presence, 2. Vertical position
+    const sortedEls = allInteractive.sort((a, b) => {
+      const inViewA = isElementInViewport(a);
+      const inViewB = isElementInViewport(b);
+      if (inViewA && !inViewB) return -1;
+      if (!inViewA && inViewB) return 1;
+      
+      const rectA = a.getBoundingClientRect();
+      const rectB = b.getBoundingClientRect();
+      return rectA.top - rectB.top;
+    });
 
     const seen = new Set();
-    for (const el of interactiveEls) {
+    for (const el of sortedEls) {
       // Skip hidden/invisible elements
       if (!isElementVisible(el)) continue;
 
       // Skip duplicates
-      const key = el.tagName + "|" + (el.textContent || "").trim().slice(0, 50) + "|" + (el.href || "");
+      const text = getElementText(el).trim();
+      const key = el.tagName + "|" + text.slice(0, 50) + "|" + (el.href || "");
       if (seen.has(key)) continue;
       seen.add(key);
 
@@ -243,7 +301,7 @@ function getPageContent(options = {}) {
       const info = {
         id: label,
         tag: el.tagName.toLowerCase(),
-        text: getElementText(el).slice(0, 80),
+        text: text.slice(0, 80),
         role: el.getAttribute("role") || "",
         type: el.type || "",
         name: el.name || el.id || "",
@@ -251,8 +309,18 @@ function getPageContent(options = {}) {
         href: "",
         disabled: el.disabled || false,
         checked: el.checked || undefined,
-        value: ""
+        inViewport: isElementInViewport(el)
       };
+
+      // Handle Shadow DOM context
+      let parent = el.parentNode;
+      while (parent) {
+        if (parent instanceof ShadowRoot) {
+          info.shadow = true;
+          break;
+        }
+        parent = parent.parentNode;
+      }
 
       // Add href for links
       if (el.href) {
@@ -271,14 +339,14 @@ function getPageContent(options = {}) {
 
       result.labels.push(info);
 
-      // Cap at 60 labels
-      if (result.labels.length >= 60) break;
+      // Cap at 100 labels (increased from 60 for better coverage)
+      if (result.labels.length >= 100) break;
     }
 
     // ── Forms ──
     result.forms = [];
     const forms = document.querySelectorAll("form");
-    for (const form of Array.from(forms).slice(0, 5)) {
+    for (const form of Array.from(forms).slice(0, 8)) {
       const formInfo = {
         action: form.action || "",
         method: form.method || "get",
@@ -301,29 +369,6 @@ function getPageContent(options = {}) {
         });
       }
       result.forms.push(formInfo);
-    }
-
-    // ── Links (with labels) ──
-    result.links = [];
-    const links = document.querySelectorAll("a[href]");
-    for (const a of Array.from(links).slice(0, 20)) {
-      try {
-        const parsed = new URL(a.href);
-        if (!["http:", "https:"].includes(parsed.protocol)) continue;
-        const text = a.textContent.trim().slice(0, 60);
-        if (!text) continue;
-
-        let existingLabel = null;
-        for (const [lbl, el] of _labelMap) {
-          if (el === a) { existingLabel = lbl; break; }
-        }
-
-        result.links.push({
-          label: existingLabel,
-          text,
-          href: a.href
-        });
-      } catch {}
     }
   }
 
@@ -597,10 +642,17 @@ function countElements(selector) {
 
 // ── Evaluate JS ──
 async function evaluateJS(expression) {
-  // Security: block dangerous patterns
-  const blocked = ["fetch(", "XMLHttpRequest", "eval(", "Function(", "import(", "chrome.", "document.cookie"];
+  // Security: block dangerous patterns (enhanced)
+  const blocked = [
+    "fetch(", "XMLHttpRequest", "eval(", "Function(", "import(", 
+    "chrome.", "document.cookie", "localStorage", "sessionStorage",
+    "indexedDB", "location.href =", "location.assign", "location.replace",
+    "window.open", "\\x", "\\u" // Block hex/unicode escapes used for obfuscation
+  ];
+  
+  const lowerExpr = expression.toLowerCase();
   for (const pattern of blocked) {
-    if (expression.includes(pattern)) {
+    if (lowerExpr.includes(pattern.toLowerCase())) {
       return { success: false, error: `Blocked expression pattern: ${pattern}` };
     }
   }

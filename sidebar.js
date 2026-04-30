@@ -100,9 +100,14 @@ function initInspector() {
       inspectorPanel.classList.remove("hidden");
       if (chatPanel) chatPanel.classList.add("hidden");
       renderInspector();
+      // Accessibility: Move focus to the inspector panel
+      inspectorPanel.setAttribute("tabindex", "-1");
+      inspectorPanel.focus();
     } else {
       inspectorPanel.classList.add("hidden");
       if (chatPanel) chatPanel.classList.remove("hidden");
+      // Accessibility: Return focus to the toggle button
+      inspectorBtn.focus();
     }
   });
 }
@@ -615,10 +620,14 @@ settingsBtn.addEventListener("click", () => {
     _updateModelOptions(provider);
     
     apiKeyInput.value = data.minimax_api_key || "";
-    modelSelect.value = data.minimax_model || modelSelect.options[0].value;
+    modelSelect.value = data.minimax_model || (modelSelect.options[0] ? modelSelect.options[0].value : "");
   });
+  
   chatScreen.classList.add("hidden");
   setupScreen.classList.remove("hidden");
+  // Accessibility: Move focus to the setup screen
+  setupScreen.setAttribute("tabindex", "-1");
+  setupScreen.focus();
 });
 
 clearBtn.addEventListener("click", () => {
@@ -629,7 +638,7 @@ clearBtn.addEventListener("click", () => {
   updateTaskProgressUI();
 });
 
-// ── Stop button ──
+// -- Stop button --
 if (stopBtn) {
   stopBtn.addEventListener("click", () => {
     stopRequested = true;
@@ -827,6 +836,8 @@ function setWorkingFrame(active) {
 
 async function runAgentLoop(initialPrompt) {
   let stepCount = 0;
+  let retryCount = 0;
+  const MAX_RETRY = 3;
   let contextUpdate = null;
   let isInitialMessage = true;
 
@@ -922,8 +933,20 @@ async function runAgentLoop(initialPrompt) {
 
       if (!action) {
         // No action — conversation is idle
+        // But check if it looks like it TRIED to do an action but failed parsing
+        if (reply.includes("```") || reply.includes("{") && reply.includes("}")) {
+          if (retryCount < MAX_RETRY) {
+            retryCount++;
+            contextUpdate = "[System]: Your previous response contained a malformed action block. Please ensure you use exactly: ```action { \"type\": \"...\", ... } ``` with valid JSON.";
+            conversationHistory.push({ role: "user", content: contextUpdate });
+            continue;
+          }
+        }
         break;
       }
+
+      // Reset retry count on successful parse
+      retryCount = 0;
 
       // Handle done action
       if (action.type === "done") {
@@ -944,6 +967,12 @@ async function runAgentLoop(initialPrompt) {
         if (typeof ToolRegistry !== "undefined" && ToolRegistry.getTool(action.type)) {
           actionResult = await ToolRegistry.execute(action.type, action);
         } else {
+          // AI Hallucinated a tool or using legacy action
+          const knownTools = typeof ToolRegistry !== "undefined" ? ToolRegistry.getVisible().map(t => t.name) : [];
+          if (knownTools.length > 0 && !knownTools.includes(action.type)) {
+             throw new Error(`Tool "${action.type}" is not available. Available tools: ${knownTools.join(", ")}`);
+          }
+
           // Fallback to direct background message
           actionResult = await sendToBackground({
             type: "BROWSER_ACTION",
@@ -1017,6 +1046,23 @@ async function runAgentLoop(initialPrompt) {
       } catch (e) {
         actionStatus.remove();
         appendError("Action error: " + e.message);
+        
+        // Self-correction logic: Feed error back to AI
+        if (retryCount < MAX_RETRY) {
+          retryCount++;
+          contextUpdate = `[Error]: The action "${action.type}" failed with message: ${e.message}. Please try a different approach or fix the parameters.`;
+          conversationHistory.push({ role: "user", content: contextUpdate });
+          // Record failure but continue loop for retry
+          if (typeof SessionRecorder !== "undefined") {
+            SessionRecorder.recordStep({
+              stepNum: stepCount, action: action.type, params: action,
+              result: null, success: false, errorMessage: e.message,
+              duration: Date.now() - (_stepStart || Date.now())
+            });
+          }
+          continue; 
+        }
+
         contextUpdate = `[Action ${action.type} error]: ${e.message}`;
         conversationHistory.push({ role: "user", content: contextUpdate });
         if (typeof SessionRecorder !== "undefined") {
