@@ -172,7 +172,20 @@ This extension is designed with a defense-in-depth approach to protect both the 
 | **No external CDN** | Fonts and assets are system-local — no outbound requests except the configured AI API |
 | **API timeout** | 30-second abort controller on every API request |
 
-> **Privacy Note:** Page text content, interactive elements, and screenshots are sent to the MiniMax API (or other configured provider) as part of the AI request. Do not use this extension on pages containing passwords, financial data, or other highly sensitive personal information.
+> **Privacy Note:** Page text content, interactive elements, and screenshots are sent to the MiniMax API (or other configured provider) as part of the AI request. Do not use this extension on pages containing passwords, financial data, or other highly sensitive personal information. Please read the full [Privacy Disclaimer](PRIVACY_DISCLAIMER.md).
+
+---
+
+## ⚠️ Important Disclaimers & Terms of Use
+
+By using, installing, or contributing to this open-source project, please be aware of the following:
+
+1. **Privacy & Data Handling:** This extension reads the active tab's DOM, text, and takes screenshots to send to third-party AI providers. **DO NOT** use this on pages with sensitive, financial, or personal information. See the full [Privacy Disclaimer](PRIVACY_DISCLAIMER.md) for more details.
+2. **Autonomous AI Actions:** In "Agent" mode, the AI can click, scroll, and navigate autonomously. The creator is not responsible for any accidental clicks, form submissions, or unwanted interactions made by the AI. Please monitor the agent's actions closely.
+3. **Security:** You must provide your own AI API key. Your key is saved locally in your browser storage and is never sent anywhere except directly to the AI provider. Never share or commit your API keys.
+4. **"As-Is" License:** This project is open-source and provided under the [MIT License](LICENSE) "as is", without any warranty of any kind.
+
+If you are interested in contributing, please review our [Contributing Guidelines](CONTRIBUTING.md).
 
 ---
 
