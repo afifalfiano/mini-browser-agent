@@ -378,8 +378,37 @@ body {
 .input-hint { font-size: 10.5px; color: var(--text-muted); text-align: center; }
 
 .input-footer {
-  display: flex; align-items: center; justify-content: space-between;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
+
+.input-footer-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ── Download Button ── */
+.download-btn {
+  background: linear-gradient(135deg, rgba(108,99,255,0.2), rgba(108,99,255,0.1));
+  border: 1px solid rgba(108,99,255,0.4);
+  color: #a78bfa;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s;
+}
+.download-btn:hover {
+  background: rgba(108,99,255,0.3);
+  border-color: var(--accent);
+  color: #fff;
+}
+.download-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
 /* ── Stop Button ── */
 .stop-btn {

@@ -12,7 +12,7 @@
     - connect-src https://api.minimaxi.chat → only our API endpoint
   -->
   <meta http-equiv="Content-Security-Policy"
-    content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src https://api.minimaxi.chat;" />
+    content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src https://api.minimaxi.chat https://generativelanguage.googleapis.com;" />
   <title>MiniMax Agent</title>
   <link rel="stylesheet" href="sidebar.css" />
 </head>
@@ -28,7 +28,14 @@
           <div class="logo-sub">Browser AI Assistant</div>
         </div>
       </div>
-      <p class="setup-desc">Enter your MiniMax API key to start using the browser agent.</p>
+      <p class="setup-desc">Select your AI provider and enter API key.</p>
+      <div class="input-group">
+        <label for="provider-select">Provider</label>
+        <select id="provider-select">
+          <option value="minimax" selected>MiniMax</option>
+          <option value="gemini">Google Gemini</option>
+        </select>
+      </div>
       <div class="input-group">
         <label for="api-key-input">API Key</label>
         <input type="password" id="api-key-input" placeholder="Your API token..."
@@ -89,17 +96,6 @@
     <!-- Chat Panel -->
     <div id="chat-panel">
       <div id="messages" class="messages" role="log" aria-live="polite" aria-label="Conversation">
-        <div class="welcome-msg">
-          <div class="welcome-icon" aria-hidden="true">🤖</div>
-          <p><strong>MiniMax Browser Agent</strong></p>
-          <p>I can read pages, click elements, navigate URLs, fill forms, manage tabs, and more. Try typing:</p>
-          <div class="suggestions" role="list">
-            <button class="suggestion-chip" data-prompt="Read and summarize this page" role="listitem">📄 Summarize this page</button>
-            <button class="suggestion-chip" data-prompt="Take a screenshot of this page" role="listitem">📸 Screenshot</button>
-            <button class="suggestion-chip" data-prompt="Open youtube.com in a new tab" role="listitem">🌐 Open YouTube</button>
-            <button class="suggestion-chip" data-prompt="List all open tabs" role="listitem">📑 List tabs</button>
-          </div>
-        </div>
       </div>
 
       <div class="input-area">
@@ -113,7 +109,10 @@
         </div>
         <div class="input-footer">
           <p class="input-hint">Enter to send · Shift+Enter for new line</p>
-          <button id="stop-btn" class="stop-btn hidden" aria-label="Stop agent">⛔ Stop</button>
+          <div class="input-footer-actions">
+            <button id="download-btn" class="download-btn hidden" aria-label="Download session report as ZIP">📦 Download Report</button>
+            <button id="stop-btn" class="stop-btn hidden" aria-label="Stop agent">⛔ Stop</button>
+          </div>
         </div>
       </div>
     </div>
@@ -125,6 +124,13 @@
   <!-- Scripts: order matters -->
   <script src="config.js"></script>
   <script src="memory.js"></script>
+  <script src="lib/zip-builder.js"></script>
+  <script src="session-recorder.js"></script>
+  
+  <script src="providers/base.js"></script>
+  <script src="providers/minimax.js"></script>
+  <script src="providers/gemini.js"></script>
+
   <script src="tools-registry.js"></script>
   <script src="tools/navigate.js"></script>
   <script src="tools/interact.js"></script>

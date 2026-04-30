@@ -1,5 +1,11 @@
-// background.js — Service Worker (Refactored for ToolRegistry)
+// background.js — Service Worker (Refactored for ToolRegistry & ProviderManager)
 
+// ── Load Providers ──
+importScripts(
+  "providers/base.js",
+  "providers/minimax.js",
+  "providers/gemini.js"
+);
 // ── Allowed origins for message validation ──
 const EXTENSION_ORIGIN = chrome.runtime.getURL("").slice(0, -1);
 
@@ -20,8 +26,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   switch (message.type) {
-    case "MINIMAX_CHAT":
-      callMiniMaxAPI(message.payload)
+    case "PROVIDER_CHAT":
+      ProviderManager.chat(message.provider, message.payload)
         .then((data) => sendResponse({ success: true, data }))
         .catch((err) => sendResponse({ success: false, error: err.message }));
       return true;
@@ -62,42 +68,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   return false;
 });
 
-// ── MiniMax API call ──
-async function callMiniMaxAPI({ apiKey, messages, model }) {
-  if (!apiKey || typeof apiKey !== "string" || apiKey.trim() === "") {
-    throw new Error("Invalid API key");
-  }
 
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 60_000); // 60s timeout
-
-  try {
-    const response = await fetch("https://api.minimaxi.chat/v1/text/chatcompletion_v2", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiKey.trim()}`
-      },
-      body: JSON.stringify({
-        model: model || "MiniMax-M2.7",
-        messages,
-        max_tokens: 4096,
-        temperature: 0.7,
-        stream: false
-      }),
-      signal: controller.signal
-    });
-
-    if (!response.ok) {
-      const errBody = await response.text();
-      throw new Error(`API error ${response.status}: ${errBody.slice(0, 200)}`);
-    }
-
-    return response.json();
-  } finally {
-    clearTimeout(timeoutId);
-  }
-}
 
 // ── Screenshot ──
 async function takeScreenshot() {

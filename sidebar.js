@@ -4,6 +4,7 @@
 const setupScreen      = document.getElementById("setup-screen");
 const chatScreen       = document.getElementById("chat-screen");
 const apiKeyInput      = document.getElementById("api-key-input");
+const providerSelect   = document.getElementById("provider-select");
 const modelSelect      = document.getElementById("model-select");
 const saveBtn          = document.getElementById("save-btn");
 const messagesEl       = document.getElementById("messages");
@@ -23,6 +24,7 @@ const chatPanel        = document.getElementById("chat-panel");
 const modeSelector     = document.getElementById("mode-selector");
 const stopBtn          = document.getElementById("stop-btn");
 const taskProgress     = document.getElementById("task-progress");
+const downloadBtn      = document.getElementById("download-btn");
 
 // ── State ──
 let conversationHistory = [];
@@ -34,19 +36,22 @@ const MAX_HISTORY_TURNS = 20;
 const MAX_AGENT_STEPS   = 25;
 
 // ── Init ──
-chrome.storage.local.get(["minimax_api_key", "minimax_model", "agent_mode", "custom_instructions"], (data) => {
+chrome.storage.local.get(["selected_provider", "minimax_api_key", "minimax_model", "gemini_api_key", "gemini_model", "agent_mode", "custom_instructions"], (data) => {
   if (chrome.runtime.lastError) {
     console.error("[Sidebar] Storage read error:", chrome.runtime.lastError.message);
     return;
   }
-  const cfg = window.DEFAULT_CONFIG || {};
-  const hasDefault = cfg.apiKey && cfg.apiKey !== "your-minimax-api-key-here";
-  if (!data.minimax_api_key && hasDefault) {
-    chrome.storage.local.set({ minimax_api_key: cfg.apiKey, minimax_model: cfg.model || "MiniMax-M2.7" }, () => {
-      showChatScreen(cfg.model || "MiniMax-M2.7");
-    });
-  } else if (data.minimax_api_key) {
-    showChatScreen(data.minimax_model || "MiniMax-M2.7");
+  
+  const provider = data.selected_provider || "minimax";
+  const hasKey = provider === "minimax" ? !!data.minimax_api_key : !!data.gemini_api_key;
+  const model = provider === "minimax" ? data.minimax_model : data.gemini_model;
+
+  if (hasKey) {
+    showChatScreen(model || (provider === "minimax" ? "MiniMax-M2.7" : "gemini-2.5-flash"));
+  } else {
+    // Populate setup screen
+    providerSelect.value = provider;
+    _updateModelOptions(provider);
   }
 
   // Restore agent mode
@@ -56,6 +61,8 @@ chrome.storage.local.get(["minimax_api_key", "minimax_model", "agent_mode", "cus
   if (data.custom_instructions && typeof PromptEngine !== "undefined") {
     PromptEngine.setCustomInstructions(data.custom_instructions);
   }
+
+  messagesEl.appendChild(buildWelcomeMsg());
 
   // Init mode selector
   initModeSelector();
@@ -554,12 +561,40 @@ askHighlightBtn.addEventListener("click", () => {
 });
 
 // ── Setup screen ──
+function _updateModelOptions(provider) {
+  let models = [];
+  if (provider === "minimax") models = ["MiniMax-M2.7", "MiniMax-M2.7-Pro", "MiniMax-M2.5", "MiniMax-M2.5-Pro"];
+  else if (provider === "gemini") models = ["gemini-2.5-flash", "gemini-2.5-pro", "gemini-3.0-flash", "gemini-3.0-pro", "gemini-2.0-flash"];
+  
+  modelSelect.innerHTML = models.map(m => `<option value="${m}">${m}</option>`).join("");
+}
+
+if (providerSelect) {
+  providerSelect.addEventListener("change", () => {
+    _updateModelOptions(providerSelect.value);
+    chrome.storage.local.get(["minimax_api_key", "gemini_api_key"], (data) => {
+      apiKeyInput.value = (providerSelect.value === "minimax" ? data.minimax_api_key : data.gemini_api_key) || "";
+    });
+  });
+}
+
 saveBtn.addEventListener("click", () => {
+  const provider = providerSelect ? providerSelect.value : "minimax";
   const key = apiKeyInput.value.trim();
   const model = modelSelect.value;
   if (!key) { apiKeyInput.style.borderColor = "#f87171"; return; }
   apiKeyInput.style.borderColor = "";
-  chrome.storage.local.set({ minimax_api_key: key, minimax_model: model }, () => {
+  
+  const payload = { selected_provider: provider };
+  if (provider === "minimax") {
+    payload.minimax_api_key = key;
+    payload.minimax_model = model;
+  } else {
+    payload.gemini_api_key = key;
+    payload.gemini_model = model;
+  }
+
+  chrome.storage.local.set(payload, () => {
     if (chrome.runtime.lastError) { appendError("Failed to save settings: " + chrome.runtime.lastError.message); return; }
     showChatScreen(model);
   });
@@ -572,10 +607,14 @@ function showChatScreen(model) {
 }
 
 settingsBtn.addEventListener("click", () => {
-  chrome.storage.local.get(["minimax_api_key", "minimax_model"], (data) => {
+  chrome.storage.local.get(["selected_provider", "minimax_api_key", "minimax_model", "gemini_api_key", "gemini_model"], (data) => {
     if (chrome.runtime.lastError) return;
-    apiKeyInput.value = data.minimax_api_key || "";
-    modelSelect.value = data.minimax_model || "MiniMax-M2.7";
+    const provider = data.selected_provider || "minimax";
+    if (providerSelect) providerSelect.value = provider;
+    _updateModelOptions(provider);
+    
+    apiKeyInput.value = (provider === "minimax" ? data.minimax_api_key : data.gemini_api_key) || "";
+    modelSelect.value = (provider === "minimax" ? data.minimax_model : data.gemini_model) || modelSelect.options[0].value;
   });
   chatScreen.classList.add("hidden");
   setupScreen.classList.remove("hidden");
@@ -786,8 +825,15 @@ async function runAgentLoop(initialPrompt) {
   let contextUpdate = null;
   let isInitialMessage = true;
 
+  // Start recording session
+  if (typeof SessionRecorder !== "undefined") {
+    SessionRecorder.start(initialPrompt);
+    if (downloadBtn) downloadBtn.classList.add("hidden");
+  }
+
   while (stepCount < MAX_AGENT_STEPS && !stopRequested) {
     stepCount++;
+    const _stepStart = Date.now();
 
     const statusDiv = appendActionStatus(stepCount === 1 ? "Thinking..." : `Step ${stepCount} — thinking...`, "running");
 
@@ -826,20 +872,26 @@ async function runAgentLoop(initialPrompt) {
         apiMessages.push({ role: "user", content: contextUpdate });
       }
 
-      // Get API key
+      // Get provider details
       const stored = await new Promise((resolve) => {
-        chrome.storage.local.get(["minimax_api_key", "minimax_model"], resolve);
+        chrome.storage.local.get(["selected_provider", "minimax_api_key", "minimax_model", "gemini_api_key", "gemini_model"], resolve);
       });
-      if (!stored.minimax_api_key) {
-        throw new Error("API key not configured. Click ⚙️ to set it.");
+      
+      const provider = stored.selected_provider || "minimax";
+      const apiKey = provider === "minimax" ? stored.minimax_api_key : stored.gemini_api_key;
+      const model = provider === "minimax" ? stored.minimax_model : stored.gemini_model;
+
+      if (!apiKey) {
+        throw new Error(`API key for ${provider} not configured. Click ⚙️ to set it.`);
       }
 
       // Call API
       const res = await sendToBackground({
-        type: "MINIMAX_CHAT",
+        type: "PROVIDER_CHAT",
+        provider: provider,
         payload: {
-          apiKey: stored.minimax_api_key,
-          model: stored.minimax_model || "MiniMax-M2.7",
+          apiKey: apiKey,
+          model: model,
           messages: apiMessages
         }
       });
@@ -851,7 +903,7 @@ async function runAgentLoop(initialPrompt) {
         break;
       }
 
-      const reply = res.data?.choices?.[0]?.message?.content || "No response.";
+      const reply = res.data?.content || "No response.";
       conversationHistory.push({ role: "assistant", content: reply });
       appendAssistantMsg(reply);
       isInitialMessage = false;
@@ -879,6 +931,7 @@ async function runAgentLoop(initialPrompt) {
 
       try {
         let actionResult;
+        const _actionStart = Date.now();
 
         // Check if tool is registered in ToolRegistry
         if (typeof ToolRegistry !== "undefined" && ToolRegistry.getTool(action.type)) {
@@ -892,14 +945,33 @@ async function runAgentLoop(initialPrompt) {
           });
         }
 
+        const _actionDuration = Date.now() - _actionStart;
         actionStatus.remove();
 
         // Take a screenshot after visual actions
         const visualActions = ["navigate", "click", "fill_input", "scroll", "new_tab", "hover", "select_option", "scroll_to"];
+        let _capturedScreenshot = null;
         if (visualActions.includes(action.type)) {
           await sleep(800); // Wait for page to settle
           const ssRes = await sendToBackground({ type: "TAKE_SCREENSHOT" });
-          if (ssRes.success) appendScreenshot(ssRes.dataUrl);
+          if (ssRes.success) {
+            appendScreenshot(ssRes.dataUrl);
+            _capturedScreenshot = ssRes.dataUrl;
+          }
+        }
+
+        // Record step
+        if (typeof SessionRecorder !== "undefined") {
+          SessionRecorder.recordStep({
+            stepNum:      stepCount,
+            action:       action.type,
+            params:       action,
+            result:       actionResult?.result ?? actionResult ?? null,
+            success:      actionResult?.success !== false,
+            errorMessage: actionResult?.error ?? null,
+            duration:     _actionDuration
+          });
+          if (_capturedScreenshot) SessionRecorder.addScreenshot(stepCount, _capturedScreenshot);
         }
 
         appendActionStatus(`Done: ${action.type}`, "done");
@@ -940,6 +1012,13 @@ async function runAgentLoop(initialPrompt) {
         appendError("Action error: " + e.message);
         contextUpdate = `[Action ${action.type} error]: ${e.message}`;
         conversationHistory.push({ role: "user", content: contextUpdate });
+        if (typeof SessionRecorder !== "undefined") {
+          SessionRecorder.recordStep({
+            stepNum: stepCount, action: action.type, params: action,
+            result: null, success: false, errorMessage: e.message,
+            duration: Date.now() - (_stepStart || Date.now())
+          });
+        }
       }
 
     } catch (err) {
@@ -951,6 +1030,15 @@ async function runAgentLoop(initialPrompt) {
 
   if (stepCount >= MAX_AGENT_STEPS) {
     appendError(`Agent reached maximum steps (${MAX_AGENT_STEPS}). Stopping.`);
+  }
+
+  // Finish recording and show download button
+  if (typeof SessionRecorder !== "undefined") {
+    SessionRecorder.end();
+    if (downloadBtn && SessionRecorder.hasData()) {
+      downloadBtn.classList.remove("hidden");
+      downloadBtn.textContent = `📦 Download Report (${SessionRecorder.getSession()?.steps?.length ?? 0} steps)`;
+    }
   }
 
   // Reset state
@@ -973,4 +1061,22 @@ function parseActionFallback(text) {
 
 function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
+}
+
+// ── Download report button ──
+if (downloadBtn) {
+  downloadBtn.addEventListener("click", async () => {
+    if (typeof SessionRecorder === "undefined" || !SessionRecorder.hasData()) return;
+    downloadBtn.disabled = true;
+    downloadBtn.textContent = "⏳ Building ZIP...";
+    try {
+      await SessionRecorder.downloadZip();
+      downloadBtn.textContent = "✅ Downloaded!";
+      setTimeout(() => { downloadBtn.textContent = `📦 Download Report`; downloadBtn.disabled = false; }, 2500);
+    } catch (e) {
+      downloadBtn.textContent = "❌ Failed";
+      setTimeout(() => { downloadBtn.disabled = false; }, 2000);
+      console.error("[Sidebar] ZIP download failed:", e);
+    }
+  });
 }
