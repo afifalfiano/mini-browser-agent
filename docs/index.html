@@ -5,10 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mini Browser Agent - AI Copilot for Chrome</title>
     <meta name="description" content="Navigate, click, summarize, and automate web tasks effortlessly inside Chrome with the open-source Mini Browser Agent.">
-    <!-- Google Fonts for Modern Typography -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -16,67 +15,136 @@
     <div class="glow-bg glow-bg-2"></div>
     
     <nav class="navbar">
-        <div class="logo">MiniAgent</div>
-        <a href="https://github.com/afifalfiano/mini-browser-agent" class="nav-btn" target="_blank" rel="noopener">GitHub</a>
+        <div class="logo">Mini<span>Agent</span></div>
+        <div class="nav-links">
+            <a href="#features">Features</a>
+            <a href="#security">Privacy</a>
+            <a href="#faq">FAQ</a>
+            <a href="#install">Install</a>
+            <iframe src="https://ghbtns.com/github-btn.html?user=afifalfiano&repo=mini-browser-agent&type=star&count=true&size=large" frameborder="0" scrolling="0" width="120" height="30" title="GitHub"></iframe>
+        </div>
     </nav>
 
-    <header class="hero">
-        <div class="hero-content">
-            <div class="badge">Open Source Chrome Extension</div>
-            <h1 class="title">Your AI Copilot <br>for the <span class="gradient-text">Web</span></h1>
-            <p class="subtitle">Embed a powerful AI sidebar directly into Chrome. Navigate pages, fill forms, extract data, and chat with full cross-session memory.</p>
+    <main>
+        <header class="hero">
+            <div class="badge">v1.0.0 is out now</div>
+            <h1 class="title">Your AI Copilot for the <span class="gradient-text">Web</span></h1>
+            <p class="subtitle">A powerful AI sidebar for Chrome. Automate tasks, summarize pages, and chat with a persistent memory agent.</p>
             <div class="cta-group">
-                <a href="https://github.com/afifalfiano/mini-browser-agent" class="btn btn-primary" target="_blank" rel="noopener">View Source on GitHub</a>
-                <a href="#features" class="btn btn-secondary">Explore Features</a>
+                <a href="https://github.com/afifalfiano/mini-browser-agent" class="btn btn-primary" target="_blank">Get Started on GitHub</a>
+                <a href="#features" class="btn btn-secondary">Learn More</a>
             </div>
-        </div>
-        <div class="hero-visual">
-            <div class="browser-mockup">
-                <div class="browser-header">
-                    <span class="dot red"></span>
-                    <span class="dot yellow"></span>
-                    <span class="dot green"></span>
-                </div>
-                <div class="browser-body">
-                    <div class="chat-bubble ai">Hello! I am your Mini Browser Agent. How can I help you today?</div>
-                    <div class="chat-bubble user">Summarize the page and click the sign-up button.</div>
-                    <div class="chat-bubble ai highlight">✅ Extracted page content<br>✅ Found 'Sign Up' button<br>Navigating...</div>
-                </div>
-            </div>
-        </div>
-    </header>
+        </header>
 
-    <section id="features" class="features-section">
-        <div class="section-header">
-            <h2>Four Powerful <span class="gradient-text">Modes</span></h2>
-            <p>Designed specifically to handle various types of web scenarios.</p>
-        </div>
-        <div class="features-grid">
-            <div class="feature-card">
-                <div class="feature-icon">🤖</div>
-                <h3>Agent Mode</h3>
-                <p>The default mode. Fully autonomous multi-step execution. Navigates, clicks, and types without needing step-by-step guidance.</p>
+        <section id="demo" class="demo">
+            <div class="container">
+                <div class="video-placeholder">
+                    <div class="play-icon">▶</div>
+                    <h3>Product Demo Coming Soon</h3>
+                    <p>We are recording a high-quality walkthrough of the Mini Browser Agent.</p>
+                </div>
             </div>
-            <div class="feature-card">
-                <div class="feature-icon">📖</div>
-                <h3>Reader Mode</h3>
-                <p>Focuses purely on text and data. Summarizes long articles and extracts specific information without altering the page.</p>
+        </section>
+
+        <section id="features" class="features">
+            <div class="container">
+                <div class="section-header">
+                    <h2 class="section-title">One Agent, <span class="gradient-text">Four Modes</span></h2>
+                    <p class="section-subtitle">Tailored personas for every web browsing task.</p>
+                </div>
+                
+                <div class="features-grid">
+                    <div class="feature-card">
+                        <div class="icon">🤖</div>
+                        <h3>Autonomous Agent</h3>
+                        <p>Fully autonomous multi-step execution. Navigates, clicks, and types without needing step-by-step guidance.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="icon">📖</div>
+                        <h3>Smart Reader</h3>
+                        <p>Focuses purely on text and data. Summarizes long articles and extracts specific information instantly.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="icon">📝</div>
+                        <h3>Form Specialist</h3>
+                        <p>Analyzes form structure, fills out fields step-by-step, and reviews data before final submission.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="icon">🔬</div>
+                        <h3>Deep Researcher</h3>
+                        <p>Cross-site research engine. Compares info from multiple tabs and provides source citations.</p>
+                    </div>
+                </div>
             </div>
-            <div class="feature-card">
-                <div class="feature-icon">📝</div>
-                <h3>Form Filler</h3>
-                <p>A data entry specialist. Analyzes the form structure, fills out fields step-by-step, and reviews data before submission.</p>
+        </section>
+
+        <section id="security" class="security">
+            <div class="container">
+                <div class="section-header">
+                    <h2 class="section-title">Privacy & <span class="gradient-text">Security</span></h2>
+                    <p class="section-subtitle">Your data belongs to you. Period.</p>
+                </div>
+                <div class="security-grid">
+                    <div class="security-item">
+                        <h3>🔒 Local Only</h3>
+                        <p>All sessions, history, and memory facts are stored locally in your Chrome storage. We don't have a backend.</p>
+                    </div>
+                    <div class="security-item">
+                        <h3>📡 Direct API</h3>
+                        <p>The extension communicates directly with your chosen AI provider. No middleman servers involved.</p>
+                    </div>
+                    <div class="security-item">
+                        <h3>🛠️ Open Audit</h3>
+                        <p>Being 100% open source means anyone can audit the code to ensure data integrity and security.</p>
+                    </div>
+                </div>
             </div>
-            <div class="feature-card">
-                <div class="feature-icon">🔬</div>
-                <h3>Researcher</h3>
-                <p>Designed for cross-site research. Opens new tabs, compares information from multiple sources, and provides source links.</p>
+        </section>
+
+        <section id="faq" class="faq">
+            <div class="container">
+                <div class="section-header">
+                    <h2 class="section-title">Common <span class="gradient-text">Questions</span></h2>
+                </div>
+                <div class="faq-list">
+                    <div class="faq-item">
+                        <h4>Do I need an API Key?</h4>
+                        <p>Yes, you need to provide your own MiniMax API key to use the extension.</p>
+                    </div>
+                    <div class="faq-item">
+                        <h4>Is it free to use?</h4>
+                        <p>The extension is free and open-source. However, you are responsible for any costs incurred from the AI provider API usage.</p>
+                    </div>
+                    <div class="faq-item">
+                        <h4>Does it work on any website?</h4>
+                        <p>It works on most standard websites. However, extremely complex SPAs or sites with heavy anti-bot protections might limit the agent's actions.</p>
+                    </div>
+                </div>
             </div>
-        </div>
-    </section>
+        </section>
+
+        <section id="install" class="install">
+            <div class="container">
+                <div class="install-card">
+                    <h2>Ready to <span class="gradient-text">Upgrade</span> your Browsing?</h2>
+                    <p>Install the unpacked extension in Developer Mode and start automating today.</p>
+                    <ol class="install-steps">
+                        <li>Clone the repository from GitHub</li>
+                        <li>Open <code>chrome://extensions</code> in Chrome</li>
+                        <li>Enable <strong>Developer mode</strong></li>
+                        <li>Click <strong>Load unpacked</strong> and select the project folder</li>
+                    </ol>
+                    <a href="https://github.com/afifalfiano/mini-browser-agent" class="btn btn-primary">Download from GitHub</a>
+                </div>
+            </div>
+        </section>
+    </main>
 
     <footer>
-        <p>Open source project built by <a href="https://github.com/afifalfiano" target="_blank" rel="noopener">Afif Alfiano</a>. MIT Licensed.</p>
+        <div class="container">
+            <p>&copy; 2026 Mini Browser Agent. MIT Licensed.</p>
+            <p>Built with ❤️ by <a href="https://github.com/afifalfiano">Afif Alfiano</a></p>
+        </div>
     </footer>
 </body>
 </html>
