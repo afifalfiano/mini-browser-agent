@@ -45,6 +45,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       sendResponse({ success: true });
       break;
 
+    case "SET_WORKING_FRAME":
+      toggleWorkingFrame(message.active);
+      sendResponse({ success: true });
+      break;
+
     case "PRESS_ENTER": {
       const el = document.activeElement;
       if (el) {
@@ -444,6 +449,7 @@ async function fillInput(selector, value, label, clear = true) {
 async function scrollToElement(label, selector) {
   const el = resolveElement(label, selector, null);
   if (!el) return { success: false, error: "Element not found" };
+  showActionIndicator(el, "hovering"); // Just highlight it
   el.scrollIntoView({ behavior: "smooth", block: "center" });
   return { success: true };
 }
@@ -464,6 +470,8 @@ async function hoverElement(label, selector, text) {
 async function selectOption(label, selector, value) {
   const el = resolveElement(label, selector, null);
   if (!el || el.tagName !== "SELECT") return { success: false, error: "Select element not found" };
+
+  showActionIndicator(el, "selecting");
 
   // Try matching by value first, then by text
   let found = false;
@@ -689,21 +697,53 @@ function showNavigatingIndicator(url) {
 
 let _indicatorTimeout = null;
 function showActionIndicator(el, label) {
-  el.scrollIntoView({ behavior: "smooth", block: "center" });
+  try {
+    if (el && el.scrollIntoView) {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  } catch (e) {}
 
   // Remove previous indicator
   const prev = document.getElementById("__ai_action_ring__");
   if (prev) prev.remove();
+  const prevBox = document.getElementById("__ai_action_box__");
+  if (prevBox) prevBox.remove();
   const prevStyle = document.getElementById("__ai_ring_style__");
   if (prevStyle) prevStyle.remove();
 
+  let rect = { top: 0, left: 0, width: 0, height: 0 };
+  try {
+    if (el && el.getBoundingClientRect) {
+      const domRect = el.getBoundingClientRect();
+      if (domRect) rect = domRect;
+    }
+  } catch (e) {}
+  
+  // Highlight box over the element
+  const box = document.createElement("div");
+  box.id = "__ai_action_box__";
+  Object.assign(box.style, {
+    position: "fixed",
+    zIndex: "2147483646",
+    border: "3px solid #6c63ff",
+    backgroundColor: "rgba(108,99,255,0.1)",
+    borderRadius: "4px",
+    pointerEvents: "none",
+    transition: "all 0.2s ease"
+  });
+  box.style.top = (rect.top || 0) + "px";
+  box.style.left = (rect.left || 0) + "px";
+  box.style.width = (rect.width || 0) + "px";
+  box.style.height = (rect.height || 0) + "px";
+
+  // Label ring
   const ring = document.createElement("div");
   ring.id = "__ai_action_ring__";
-  const icons = { clicking: "👆", filling: "✏️", hovering: "🖱️" };
-  ring.textContent = icons[label] || "🔧";
+  const icons = { clicking: "👆 Clicking", filling: "✏️ Typing", hovering: "🖱️ Hovering", selecting: "☑️ Selecting" };
+  ring.textContent = icons[label] || "🔧 Action";
   Object.assign(ring.style, {
     position: "fixed",
-    zIndex: 2147483647,
+    zIndex: "2147483647",
     background: "rgba(108,99,255,0.95)",
     color: "#fff",
     borderRadius: "6px",
@@ -715,29 +755,29 @@ function showActionIndicator(el, label) {
     boxShadow: "0 4px 20px rgba(108,99,255,0.5)",
     whiteSpace: "nowrap"
   });
-
-  const rect = el.getBoundingClientRect();
-  ring.style.top = Math.max(0, rect.top - 36) + "px";
-  ring.style.left = Math.max(0, rect.left) + "px";
+  ring.style.top = Math.max(0, (rect.top || 0) - 36) + "px";
+  ring.style.left = Math.max(0, (rect.left || 0)) + "px";
 
   const style = document.createElement("style");
   style.id = "__ai_ring_style__";
   style.textContent = `
     @keyframes __ai_ring_pulse__ {
       0% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.7; transform: scale(1.08); }
+      50% { opacity: 0.8; transform: scale(1.05); }
       100% { opacity: 1; transform: scale(1); }
     }
-    #__ai_action_ring__ { animation: __ai_ring_pulse__ 1s ease-in-out infinite; }
+    #__ai_action_ring__, #__ai_action_box__ { animation: __ai_ring_pulse__ 1s ease-in-out infinite; }
   `;
   document.head.appendChild(style);
+  document.body.appendChild(box);
   document.body.appendChild(ring);
 
   if (_indicatorTimeout) clearTimeout(_indicatorTimeout);
   _indicatorTimeout = setTimeout(() => {
     ring.remove();
+    box.remove();
     style.remove();
-  }, 3000);
+  }, 2500);
 }
 
 // ── Highlight selection listener — debounced, min 20 chars ──
@@ -756,4 +796,30 @@ document.addEventListener("mouseup", handleSelection);
 
 function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
+}
+
+// ── Working Frame Indicator ──
+function toggleWorkingFrame(active) {
+  let frame = document.getElementById("__ai_working_frame__");
+  if (active) {
+    if (!frame) {
+      frame = document.createElement("div");
+      frame.id = "__ai_working_frame__";
+      Object.assign(frame.style, {
+        position: "fixed",
+        top: "0",
+        left: "0",
+        right: "0",
+        bottom: "0",
+        zIndex: 2147483645,
+        pointerEvents: "none",
+        border: "5px solid rgba(108, 99, 255, 0.7)",
+        boxShadow: "inset 0 0 30px rgba(108, 99, 255, 0.4)",
+        transition: "all 0.3s ease"
+      });
+      document.body.appendChild(frame);
+    }
+  } else {
+    if (frame) frame.remove();
+  }
 }

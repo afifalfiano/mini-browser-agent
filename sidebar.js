@@ -820,10 +820,16 @@ async function sendMessage() {
 }
 
 // ── Agent Loop — handles multi-step AI actions ──
+function setWorkingFrame(active) {
+  sendToBackground({ type: "BROWSER_ACTION", action: "set_working_frame", params: { active } }).catch(() => {});
+}
+
 async function runAgentLoop(initialPrompt) {
   let stepCount = 0;
   let contextUpdate = null;
   let isInitialMessage = true;
+
+  setWorkingFrame(true);
 
   // Start recording session
   if (typeof SessionRecorder !== "undefined") {
@@ -1048,6 +1054,7 @@ async function runAgentLoop(initialPrompt) {
   if (stopBtn) stopBtn.classList.add("hidden");
   chatInput.focus();
   updateTaskProgressUI();
+  setWorkingFrame(false);
 }
 
 // ── Fallback action parser (when PromptEngine is not available) ──

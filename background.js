@@ -169,6 +169,7 @@ async function executeBrowserAction(action, params) {
     case "hover":
     case "select_option":
     case "get_selected_text":
+    case "set_working_frame":
       if (!tab?.id) throw new Error("No active tab found");
       return await sendToContentScript(tab.id, { action: action.toUpperCase(), ...params });
 
