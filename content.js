@@ -821,9 +821,9 @@ function showActionIndicator(el, label) {
   ring.style.top = Math.max(0, (rect.top || 0) - 36) + "px";
   ring.style.left = Math.max(0, (rect.left || 0)) + "px";
 
-  const style = document.createElement("style");
-  style.id = "__ai_ring_style__";
-  style.textContent = `
+  const ringStyle = document.createElement("style");
+  ringStyle.id = "__ai_ring_style__";
+  ringStyle.textContent = `
     @keyframes __ai_ring_pulse__ {
       0% { opacity: 1; transform: scale(1); }
       50% { opacity: 0.8; transform: scale(1.05); }
@@ -831,18 +831,12 @@ function showActionIndicator(el, label) {
     }
     #__ai_action_ring__, #__ai_action_box__ { animation: __ai_ring_pulse__ 1s ease-in-out infinite; }
   `;
-  document.head.appendChild(style);
+  document.head.appendChild(ringStyle);
+
   document.body.appendChild(box);
   document.body.appendChild(ring);
-
-  if (_indicatorTimeout) clearTimeout(_indicatorTimeout);
-  _indicatorTimeout = setTimeout(() => {
-    ring.remove();
-    box.remove();
-    style.remove();
-  }, 2500);
 }
-
+  
 // ── Highlight selection listener — debounced, min 20 chars ──
 const handleSelection = debounce(() => {
   const selected = window.getSelection().toString().trim();

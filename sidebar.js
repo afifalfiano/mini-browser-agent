@@ -566,9 +566,8 @@ askHighlightBtn.addEventListener("click", () => {
 });
 
 // ── Setup screen ──
-function _updateModelOptions(provider) {
+function _updateModelOptions() {
   let models = ["MiniMax-M2.7"];
-  
   modelSelect.innerHTML = "";
   models.forEach((m) => {
     const opt = document.createElement("option");
@@ -580,7 +579,7 @@ function _updateModelOptions(provider) {
 
 if (providerSelect) {
   providerSelect.addEventListener("change", () => {
-    _updateModelOptions(providerSelect.value);
+    _updateModelOptions();
     chrome.storage.local.get(["minimax_api_key"], (data) => {
       apiKeyInput.value = data.minimax_api_key || "";
     });
@@ -932,15 +931,13 @@ async function runAgentLoop(initialPrompt) {
         : parseActionFallback(reply);
 
       if (!action) {
-        // No action — conversation is idle
-        // But check if it looks like it TRIED to do an action but failed parsing
-        if (reply.includes("```") || reply.includes("{") && reply.includes("}")) {
-          if (retryCount < MAX_RETRY) {
-            retryCount++;
-            contextUpdate = "[System]: Your previous response contained a malformed action block. Please ensure you use exactly: ```action { \"type\": \"...\", ... } ``` with valid JSON.";
-            conversationHistory.push({ role: "user", content: contextUpdate });
-            continue;
-          }
+        // No action parsed — only retry if there was a REAL malformed action block (not just curly braces in text)
+        const hadBlockMatch = /```(?:action|json)\s*\{[^}]+\}/s.test(reply);
+        if (hadBlockMatch && retryCount < MAX_RETRY) {
+          retryCount++;
+          contextUpdate = "[System]: Your previous response had a malformed action block. Use exactly: ```action { \"type\": \"...\" } ``` with valid JSON inside.";
+          conversationHistory.push({ role: "user", content: contextUpdate });
+          continue;
         }
         break;
       }
@@ -988,7 +985,7 @@ async function runAgentLoop(initialPrompt) {
         const visualActions = ["navigate", "click", "fill_input", "scroll", "new_tab", "hover", "select_option", "scroll_to"];
         let _capturedScreenshot = null;
         if (visualActions.includes(action.type)) {
-          await sleep(800); // Wait for page to settle
+          await sleep(1200); // Wait for page to settle
           const ssRes = await sendToBackground({ type: "TAKE_SCREENSHOT" });
           if (ssRes.success) {
             appendScreenshot(ssRes.dataUrl);
@@ -1013,8 +1010,11 @@ async function runAgentLoop(initialPrompt) {
         appendActionStatus(`Done: ${action.type}`, "done");
 
         // Build context update for next iteration
-        if (actionResult?.success === false) {
-          contextUpdate = `[Action ${action.type} failed]: ${actionResult.error || "Unknown error"}`;
+        // Check both top-level success:false (ToolRegistry) and nested result.error (browser actions)
+        const resultError = actionResult?.result?.error || actionResult?.error;
+        if (actionResult?.success === false || resultError) {
+          const errMsg = resultError || actionResult?.error || "Unknown error";
+          contextUpdate = `[Action ${action.type} failed]: ${errMsg}`;
           conversationHistory.push({ role: "user", content: contextUpdate });
         } else if (action.type === "read_page" || action.type === "navigate" || action.type === "new_tab") {
           // Read page content after navigation
@@ -1038,10 +1038,26 @@ async function runAgentLoop(initialPrompt) {
             .join("\n");
           contextUpdate = `[Action ${action.type} completed]\nOpen tabs:\n${tabList}`;
           conversationHistory.push({ role: "user", content: contextUpdate });
+        } else if (["click", "fill_input", "scroll", "hover", "select_option", "scroll_to"].includes(action.type)) {
+          // Fetch page content so AI sees the result of DOM actions
+          await sleep(1000);
+          const pageRes = await sendToBackground({ type: "GET_PAGE_CONTENT", options: { mode: "full" } });
+          if (pageRes.success && pageRes.content) {
+            const pageBlock = typeof PromptEngine !== "undefined"
+              ? PromptEngine.buildPageContextBlock(pageRes.content)
+              : `[Page]: ${JSON.stringify(pageRes.content).slice(0, 3000)}`;
+            contextUpdate = `[Action ${action.type} completed]\n${pageBlock}`;
+          } else {
+            contextUpdate = `[Action ${action.type} completed]: ${JSON.stringify(actionResult?.result || actionResult || {}).slice(0, 1000)}`;
+          }
+          conversationHistory.push({ role: "user", content: contextUpdate });
         } else {
           contextUpdate = `[Action ${action.type} completed]: ${JSON.stringify(actionResult?.result || actionResult || {}).slice(0, 1000)}`;
           conversationHistory.push({ role: "user", content: contextUpdate });
         }
+
+        // Pause between steps — user sees result, AI gets fresh context
+        await sleep(1500);
 
       } catch (e) {
         actionStatus.remove();
