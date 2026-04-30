@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mini Browser Agent - AI Copilot for Chrome</title>
+    <meta name="description" content="Navigate, click, summarize, and automate web tasks effortlessly inside Chrome with the open-source Mini Browser Agent.">
+    <!-- Google Fonts for Modern Typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="glow-bg"></div>
+    <div class="glow-bg glow-bg-2"></div>
+    
+    <nav class="navbar">
+        <div class="logo">MiniAgent</div>
+        <a href="https://github.com/afifalfiano/mini-browser-agent" class="nav-btn" target="_blank" rel="noopener">GitHub</a>
+    </nav>
+
+    <header class="hero">
+        <div class="hero-content">
+            <div class="badge">Open Source Chrome Extension</div>
+            <h1 class="title">Your AI Copilot <br>for the <span class="gradient-text">Web</span></h1>
+            <p class="subtitle">Embed a powerful AI sidebar directly into Chrome. Navigate pages, fill forms, extract data, and chat with full cross-session memory.</p>
+            <div class="cta-group">
+                <a href="https://github.com/afifalfiano/mini-browser-agent" class="btn btn-primary" target="_blank" rel="noopener">View Source on GitHub</a>
+                <a href="#features" class="btn btn-secondary">Explore Features</a>
+            </div>
+        </div>
+        <div class="hero-visual">
+            <div class="browser-mockup">
+                <div class="browser-header">
+                    <span class="dot red"></span>
+                    <span class="dot yellow"></span>
+                    <span class="dot green"></span>
+                </div>
+                <div class="browser-body">
+                    <div class="chat-bubble ai">Hello! I am your Mini Browser Agent. How can I help you today?</div>
+                    <div class="chat-bubble user">Summarize the page and click the sign-up button.</div>
+                    <div class="chat-bubble ai highlight">✅ Extracted page content<br>✅ Found 'Sign Up' button<br>Navigating...</div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <section id="features" class="features-section">
+        <div class="section-header">
+            <h2>Four Powerful <span class="gradient-text">Modes</span></h2>
+            <p>Designed specifically to handle various types of web scenarios.</p>
+        </div>
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon">🤖</div>
+                <h3>Agent Mode</h3>
+                <p>The default mode. Fully autonomous multi-step execution. Navigates, clicks, and types without needing step-by-step guidance.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">📖</div>
+                <h3>Reader Mode</h3>
+                <p>Focuses purely on text and data. Summarizes long articles and extracts specific information without altering the page.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">📝</div>
+                <h3>Form Filler</h3>
+                <p>A data entry specialist. Analyzes the form structure, fills out fields step-by-step, and reviews data before submission.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🔬</div>
+                <h3>Researcher</h3>
+                <p>Designed for cross-site research. Opens new tabs, compares information from multiple sources, and provides source links.</p>
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <p>Open source project built by <a href="https://github.com/afifalfiano" target="_blank" rel="noopener">Afif Alfiano</a>. MIT Licensed.</p>
+    </footer>
+</body>
+</html>
