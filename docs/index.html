@@ -38,11 +38,11 @@
 
         <section id="demo" class="demo">
             <div class="container">
-                <div class="video-placeholder">
-                    <div class="play-icon">▶</div>
-                    <h3>Product Demo Coming Soon</h3>
-                    <p>We are recording a high-quality walkthrough of the Mini Browser Agent.</p>
-                </div>
+                <video id="demo-video" class="demo-video" controls autoplay muted loop playsinline poster="assets/hero.png">
+                    <source src="assets/demo.mov" type="video/mp4">
+                    <source src="assets/demo.mov" type="video/quicktime">
+                    Your browser does not support the video tag.
+                </video>
             </div>
         </section>
 
@@ -146,5 +146,17 @@
             <p>Built with ❤️ by <a href="https://github.com/afifalfiano">Afif Alfiano</a></p>
         </div>
     </footer>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const video = document.getElementById('demo-video');
+            if (video) {
+                video.playbackRate = 2.0;
+                // Ensure it stays at 2x even after loop or manual play
+                video.addEventListener('play', () => {
+                    video.playbackRate = 2.0;
+                });
+            }
+        });
+    </script>
 </body>
 </html>
