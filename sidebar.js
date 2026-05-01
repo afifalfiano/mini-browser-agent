@@ -32,16 +32,19 @@ let isLoading           = false;
 let pendingHighlight    = null;
 let stopRequested       = false;
 let inspectorVisible    = false;
+let autoCaptureEnabled  = true;
 const MAX_HISTORY_TURNS = 20;
 const MAX_AGENT_STEPS   = 25;
 
 // ── Init ──
-chrome.storage.local.get(["selected_provider", "minimax_api_key", "minimax_model", "agent_mode", "custom_instructions"], (data) => {
+chrome.storage.local.get(["selected_provider", "minimax_api_key", "minimax_model", "agent_mode", "custom_instructions", "auto_capture_screenshot"], (data) => {
   if (chrome.runtime.lastError) {
     console.error("[Sidebar] Storage read error:", chrome.runtime.lastError.message);
     return;
   }
-  
+
+  autoCaptureEnabled = data.auto_capture_screenshot !== false;
+
   const provider = data.selected_provider || "minimax";
   const hasKey = !!data.minimax_api_key;
   const model = data.minimax_model;
@@ -602,9 +605,12 @@ saveBtn.addEventListener("click", () => {
     payload.minimax_api_key = key;
     payload.minimax_model = model;
   }
+  const autoCaptureCheckbox = document.getElementById("auto-capture-checkbox");
+  payload.auto_capture_screenshot = autoCaptureCheckbox ? autoCaptureCheckbox.checked : true;
 
   chrome.storage.local.set(payload, () => {
     if (chrome.runtime.lastError) { appendError("Failed to save settings: " + chrome.runtime.lastError.message); return; }
+    autoCaptureEnabled = payload.auto_capture_screenshot;
     showChatScreen(model);
   });
 });
@@ -616,7 +622,7 @@ function showChatScreen(model) {
 }
 
 settingsBtn.addEventListener("click", () => {
-  chrome.storage.local.get(["selected_provider", "minimax_api_key", "minimax_model"], (data) => {
+  chrome.storage.local.get(["selected_provider", "minimax_api_key", "minimax_model", "auto_capture_screenshot"], (data) => {
     if (chrome.runtime.lastError) return;
     const provider = data.selected_provider || "minimax";
     if (providerSelect) providerSelect.value = provider;
@@ -624,6 +630,11 @@ settingsBtn.addEventListener("click", () => {
     
     apiKeyInput.value = data.minimax_api_key || "";
     modelSelect.value = data.minimax_model || (modelSelect.options[0] ? modelSelect.options[0].value : "");
+    
+    const autoCaptureCheckbox = document.getElementById("auto-capture-checkbox");
+    if (autoCaptureCheckbox) {
+      autoCaptureCheckbox.checked = data.auto_capture_screenshot !== false;
+    }
   });
   
   chatScreen.classList.add("hidden");
@@ -1012,15 +1023,17 @@ async function runAgentLoop(initialPrompt) {
 
         // Take a final screenshot for the UI
         let _finalScreenshot = null;
-        await sleep(800); // Wait for page to settle
-        try {
-          const ssRes = await sendToBackground({ type: "TAKE_SCREENSHOT" });
-          if (ssRes && ssRes.success) {
-            appendScreenshot(ssRes.dataUrl);
-            _finalScreenshot = ssRes.dataUrl;
+        await sleep(800); // Wait for page to settle — unconditional
+        if (autoCaptureEnabled) {
+          try {
+            const ssRes = await sendToBackground({ type: "TAKE_SCREENSHOT" });
+            if (ssRes && ssRes.success) {
+              appendScreenshot(ssRes.dataUrl);
+              _finalScreenshot = ssRes.dataUrl;
+            }
+          } catch (e) {
+            console.warn("Failed to capture final screenshot", e);
           }
-        } catch (e) {
-          console.warn("Failed to capture final screenshot", e);
         }
 
         if (typeof SessionRecorder !== "undefined") {
@@ -1031,7 +1044,7 @@ async function runAgentLoop(initialPrompt) {
           });
           if (_finalScreenshot) SessionRecorder.addScreenshot(stepCount, _finalScreenshot);
         }
-        
+
         break;
       }
 
@@ -1069,11 +1082,13 @@ async function runAgentLoop(initialPrompt) {
         const visualActions = ["navigate", "click", "fill_input", "scroll", "new_tab", "hover", "select_option", "scroll_to"];
         let _capturedScreenshot = null;
         if (visualActions.includes(action.type)) {
-          await sleep(1200); // Wait for page to settle
-          const ssRes = await sendToBackground({ type: "TAKE_SCREENSHOT" });
-          if (ssRes.success) {
-            appendScreenshot(ssRes.dataUrl);
-            _capturedScreenshot = ssRes.dataUrl;
+          await sleep(1200); // Wait for page to settle — unconditional
+          if (autoCaptureEnabled) {
+            const ssRes = await sendToBackground({ type: "TAKE_SCREENSHOT" });
+            if (ssRes.success) {
+              appendScreenshot(ssRes.dataUrl);
+              _capturedScreenshot = ssRes.dataUrl;
+            }
           }
         }
 

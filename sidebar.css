@@ -90,7 +90,7 @@ body {
   text-transform: uppercase; letter-spacing: 0.6px;
 }
 
-.input-group input,
+.input-group input:not([type="checkbox"]),
 .input-group select {
   background: var(--bg-2);
   border: 1px solid var(--border);
@@ -104,9 +104,13 @@ body {
   -webkit-appearance: none;
 }
 
-.input-group input:focus,
+.input-group input:not([type="checkbox"]):focus,
 .input-group select:focus { border-color: var(--accent); }
 .input-group input::placeholder { color: var(--text-muted); }
+
+.input-group--inline { flex-direction: row; align-items: center; justify-content: space-between; }
+
+.input-group--inline input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; flex-shrink: 0; }
 
 .btn-primary {
   background: var(--accent);
