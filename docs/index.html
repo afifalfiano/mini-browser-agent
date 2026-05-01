@@ -38,10 +38,15 @@
 
         <section id="demo" class="demo">
             <div class="container">
-                <video id="demo-video" class="demo-video" controls autoplay muted loop playsinline poster="assets/hero.png">
-                    <source src="https://drive.google.com/uc?export=download&id=1MC06Kdx8FVWfkrClNGjOHRTbTb2Jtgfz" type="video/mp4">
-                    Your browser does not support the video tag.
-                </video>
+                <div class="video-container">
+                    <iframe 
+                        src="https://www.youtube.com/embed/xbjU-BVNG-c?autoplay=1&mute=1&loop=1&playlist=xbjU-BVNG-c" 
+                        title="Mini Browser Agent Demo" 
+                        frameborder="0" 
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+                        allowfullscreen>
+                    </iframe>
+                </div>
             </div>
         </section>
 
@@ -145,17 +150,5 @@
             <p>Built with ❤️ by <a href="https://github.com/afifalfiano">Afif Alfiano</a></p>
         </div>
     </footer>
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const video = document.getElementById('demo-video');
-            if (video) {
-                video.playbackRate = 2.0;
-                // Ensure it stays at 2x even after loop or manual play
-                video.addEventListener('play', () => {
-                    video.playbackRate = 2.0;
-                });
-            }
-        });
-    </script>
 </body>
 </html>
