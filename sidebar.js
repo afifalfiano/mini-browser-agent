@@ -68,6 +68,10 @@ chrome.storage.local.get(["selected_provider", "minimax_api_key", "minimax_model
   initModeSelector();
   // Init inspector
   initInspector();
+  // Init token display
+  if (typeof TokenDisplay !== "undefined") {
+    TokenDisplay.init();
+  }
   // Log tool registry stats
   if (typeof ToolRegistry !== "undefined") {
     const stats = ToolRegistry.getStats();
@@ -635,6 +639,11 @@ clearBtn.addEventListener("click", () => {
   messagesEl.innerHTML = "";
   messagesEl.appendChild(buildWelcomeMsg("Chat cleared! Start a new conversation."));
   updateTaskProgressUI();
+  // Reset token tracking
+  if (typeof TokenTracker !== "undefined" && typeof TokenDisplay !== "undefined") {
+    TokenTracker.reset();
+    TokenDisplay.update(TokenTracker.getState());
+  }
 });
 
 // -- Stop button --
@@ -645,6 +654,9 @@ if (stopBtn) {
     appendActionStatus("⛔ Stopped by user", "done");
     isLoading = false;
     sendBtn.disabled = false;
+    if (typeof TokenDisplay !== "undefined") {
+      TokenDisplay.setLoading(false);
+    }
     chatInput.focus();
   });
 }
@@ -927,6 +939,11 @@ async function runAgentLoop(initialPrompt) {
         throw new Error(`API key for ${provider} not configured. Click ⚙️ to set it.`);
       }
 
+      // Token tracking: show loading indicator
+      if (typeof TokenDisplay !== "undefined") {
+        TokenDisplay.setLoading(true);
+      }
+
       // Call API
       const res = await sendToBackground({
         type: "PROVIDER_CHAT",
@@ -948,6 +965,25 @@ async function runAgentLoop(initialPrompt) {
       const reply = res.data?.content || "No response.";
       conversationHistory.push({ role: "assistant", content: reply });
       appendAssistantMsg(reply);
+      // Token tracking — non-disruptif, wrapped dalam try/catch
+      try {
+        if (typeof TokenTracker !== "undefined" && typeof TokenDisplay !== "undefined") {
+          const tokenState = TokenTracker.record({
+            raw: res.data?.raw,
+            model: model,
+            provider: provider,
+            promptMessages: apiMessages,
+            completionText: reply
+          });
+          TokenDisplay.update(tokenState);
+        }
+      } catch (e) {
+        console.warn("[TokenTracker] Error:", e);
+      }
+      // Token tracking: hide loading indicator
+      if (typeof TokenDisplay !== "undefined") {
+        TokenDisplay.setLoading(false);
+      }
       isInitialMessage = false;
 
       // Parse action from response
@@ -1142,6 +1178,10 @@ async function runAgentLoop(initialPrompt) {
     } catch (err) {
       statusDiv.remove();
       _loopEndedWithError = true;
+      // Token tracking: hide loading indicator on error
+      if (typeof TokenDisplay !== "undefined") {
+        TokenDisplay.setLoading(false);
+      }
       appendError(err.message || String(err), () => {
         chatInput.value = "Please continue the task. Retry the last failed step using a different approach if needed.";
         sendMessage();

@@ -2,6 +2,28 @@
 
 All notable changes to the **Mini Browser Agent** extension will be documented in this file.
 
+## [2.3.0] - 2026-05-01
+
+### Added
+- **Realtime Token Usage Summary:** A live token tracking panel now appears in the sidebar below the header after the first API call.
+  - Displays cumulative total tokens, prompt/completion breakdown, number of API calls, and estimated cost in USD.
+  - Supports all four MiniMax models with individual pricing configs (M2.7, M2.7-Pro, M2.5, M2.5-Pro). Falls back to M2.7 pricing for unknown models.
+  - Falls back to character-based estimation (`ceil(chars / 4)`) when the API response does not include a `usage` field.
+  - Loading indicator (⏳) animates while the agent is waiting for a response; stops when the response arrives or the agent is stopped.
+  - Panel is hidden when no API calls have been made yet; appears automatically after the first call.
+  - Resets automatically when the user clears the chat.
+  - Session data persisted to `chrome.storage.session` (falls back to `chrome.storage.local`) so token counts survive tab switches.
+  - Fully non-disruptive — any error inside token tracking is caught silently and never interrupts the agent loop.
+  - Accessible: panel uses `aria-live="polite"` and `role="status"` for screen reader support.
+- **Test suite (Vitest + fast-check):** Added `npm test` with 69 tests across 8 files — 13 property-based tests (100 runs each) covering all correctness properties, plus unit and integration tests.
+
+### Changed
+- `sidebar.html` — token panel HTML inserted between `#highlight-toast` and `#task-progress`; `token-tracker.js` script tag added before `sidebar.js`.
+- `sidebar.css` — token panel styles appended (`.token-panel`, `.token-panel-inner`, `.token-label`, `.token-loading`, `.token-cumulative`, `.token-breakdown`, `.token-calls`, `.token-cost`, `.token-last`).
+- `sidebar.js` — integrated `TokenTracker.record()` and `TokenDisplay.update()` after each API response; added loading indicator lifecycle; reset on clear chat; stop on user cancel.
+
+---
+
 ## [2.2.0] - 2026-05-01
 ### Security
 - **`evaluate_js` hardened blocklist:** Expanded blocked expression patterns from 10 to 30+, covering global object bypasses (`globalThis`, `self.`, `top.`, `parent.`, `frames[`), encoding obfuscation (`atob`, `btoa`, `\x`, `\u`), prototype pollution (`__proto__`, `.constructor`), dangerous DOM reads (`document.forms`, `document.body.innerHTML`), additional execution vectors (`setTimeout`, `setInterval`, `(0,eval)`), and Node.js globals (`require`, `process`, `module`). Added a hard 500-character length cap on all evaluated expressions.

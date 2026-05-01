@@ -11,6 +11,7 @@ A Chrome extension that embeds an AI-powered sidebar to control your browser —
 - **Page Reader** — reads and summarizes the active page content
 - **Screenshot** — captures the visible tab and displays it in chat
 - **Text Highlight** — select any text on a page and instantly ask the AI about it
+- **Realtime Token Usage Summary** — live panel showing cumulative tokens, prompt/completion breakdown, API call count, and estimated USD cost per session; resets with chat clear
 - **Conversation Sessions** — multiple named chat sessions, each persisted across browser restarts
 - **Memory Context** — AI remembers facts about you across sessions (name, preferences, habits)
 - **Secure by default** — CSP enforced, URL validation, sender origin checks, no external CDN
@@ -24,6 +25,7 @@ A Chrome extension that embeds an AI-powered sidebar to control your browser —
 ├── background.js           # Service worker — API calls, tab control, screenshot
 ├── content.js              # Injected into every page — DOM reading, clicking, scrolling
 ├── memory.js               # Session manager + memory bank (loaded before sidebar.js)
+├── token-tracker.js        # TokenTracker + TokenDisplay — realtime token usage tracking
 ├── sidebar.html            # Side panel UI
 ├── sidebar.js              # Side panel logic — chat, agent loop, inspector
 ├── sidebar.css             # Side panel styles
@@ -44,6 +46,15 @@ A Chrome extension that embeds an AI-powered sidebar to control your browser —
 ├── session-recorder.js     # Step-by-step session logger + ZIP exporter
 ├── lib/
 │   └── zip-builder.js      # Pure-JS ZIP builder (no external deps)
+├── tests/                  # Vitest test suite (unit + property-based)
+│   ├── token-tracker.unit.test.js
+│   ├── token-tracker.property.test.js
+│   ├── token-display.unit.test.js
+│   ├── token-display.property.test.js
+│   ├── sidebar-integration.unit.test.js
+│   ├── sidebar-integration.property.test.js
+│   ├── storage-integration.unit.test.js
+│   └── storage-integration.property.test.js
 └── icons/
     ├── icon16.png
     ├── icon48.png
@@ -125,6 +136,32 @@ Switch modes via the dropdown in the sidebar header:
 
 ---
 
+## Token Usage Summary
+
+After the first API call, a compact panel appears below the sidebar header showing:
+
+| Field | Description |
+|---|---|
+| **Tokens** | Cumulative total tokens for the session |
+| **↑ / ↓** | Prompt tokens sent / completion tokens received |
+| **Calls** | Number of API calls made |
+| **Cost** | Estimated USD cost based on model pricing |
+
+The panel is hidden until the first call is made and resets when you clear the chat. Token counts are persisted across tab switches via `chrome.storage.session`.
+
+**Supported model pricing:**
+
+| Model | Input / 1K tokens | Output / 1K tokens |
+|---|---|---|
+| MiniMax-M2.7 | $0.0008 | $0.0008 |
+| MiniMax-M2.7-Pro | $0.0016 | $0.0016 |
+| MiniMax-M2.5 | $0.0004 | $0.0004 |
+| MiniMax-M2.5-Pro | $0.0008 | $0.0008 |
+
+> Prices are estimates. If the API response does not include a `usage` field, token counts are estimated using `ceil(characters / 4)`.
+
+---
+
 ## Tool Inspector
 
 Click the 🔧 wrench icon in the header to open the **Tool Inspector** panel:
@@ -190,6 +227,14 @@ If you are interested in contributing, please review our [Contributing Guideline
 ---
 
 ## Development
+
+### Running Tests
+
+```bash
+npm test
+```
+
+Runs 69 tests (unit + property-based) using Vitest + fast-check. Tests cover all 13 correctness properties of the token tracking module with 100 random iterations each.
 
 ### Making Changes
 

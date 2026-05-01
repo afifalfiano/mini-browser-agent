@@ -49,3 +49,9 @@ The **Researcher** mode is designed for academic work, journalism, or comparativ
   - Can read multiple pages in parallel or sequentially, and then compare their contents.
   - Instructed to always provide **source links (URLs)** at the end of the summary to ensure data credibility.
 - **When to Use:** "Find a feature and price comparison between the iPhone 15 and Samsung Galaxy S24 from 3 leading review sites."
+
+---
+
+## Token Usage Panel
+
+All agent modes share a **realtime token usage summary** panel displayed below the sidebar header. It shows cumulative token consumption and estimated USD cost for the current session, updating automatically after each API response. The panel is hidden until the first API call is made and resets when the chat is cleared.

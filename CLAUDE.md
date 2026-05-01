@@ -4,16 +4,24 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Chrome Extension (MV3) — AI browser agent. Embeds a side panel with chat that controls the browser (navigate, click, fill forms, screenshots, page reading, tab management, DOM inspection).
+Chrome Extension (MV3) — AI browser agent. Embeds a side panel with chat that controls the browser (navigate, click, fill forms, screenshots, page reading, tab management, DOM inspection). Includes a realtime token usage summary panel that tracks cumulative tokens and estimated cost per session.
 
 ## No Build Step
 
-Pure Chrome extension. No bundler, no transpiler, no tests.
+Pure Chrome extension. No bundler, no transpiler.
 
 - Edit files directly
 - Reload at `chrome://extensions` → click ↺ on the extension card
 - Debug sidebar: right-click inside sidebar → Inspect
 - Debug background: `chrome://extensions` → click "service worker" link
+
+### Tests
+
+```bash
+npm test
+```
+
+Runs 69 tests (Vitest + fast-check) covering the `TokenTracker` and `TokenDisplay` modules. Tests use jsdom and do not require a browser. `chrome.*` APIs are mocked per test.
 
 ## Architecture
 
@@ -21,6 +29,9 @@ Pure Chrome extension. No bundler, no transpiler, no tests.
 background.js       → Service worker. API calls, screenshots, tab control, message routing
 content.js          → Injected into every page. DOM reading, clicking, scrolling, form filling,
                       element labeling system, DOM query, JS evaluation, visual indicators
+token-tracker.js    → TokenTracker (token extraction, accumulation, cost calc, storage persistence)
+                      + TokenDisplay (DOM rendering of the token panel). Plain browser script,
+                      no ESM — exposes globals via globalThis for both extension and test use.
 tools-registry.js   → ToolRegistry — plugin-based tool registration & execution system
 prompt-engine.js    → PromptEngine — dynamic system prompt builder, action parser, task planner
 memory.js           → Session manager + MemoryManager.
@@ -28,7 +39,7 @@ session-recorder.js → Session recording tracker for ZIP report generation
 lib/zip-builder.js  → Pure JS utility for creating .zip files
 sidebar.html        → Side panel entry point (loads all scripts in order)
 sidebar.js          → Chat UI logic, agent loop, inspector panel, action handlers
-sidebar.css         → Styles (including inspector panel, task progress, message types)
+sidebar.css         → Styles (including inspector panel, task progress, message types, token panel)
 config.js           → Default API key/model config
 
 providers/          → Provider Architecture
@@ -43,9 +54,26 @@ tools/              → Individual tool modules (each registers with ToolRegistr
   wait.js           → wait, wait_for_element, wait_for_navigation
   evaluate.js       → evaluate_js, extract_data
   tab-manager.js    → list_tabs, switch_tab, close_tab, done
+
+tests/              → Vitest test suite (jsdom environment)
+  token-tracker.unit.test.js
+  token-tracker.property.test.js      → Properties 1, 2, 3, 4, 5, 6, 7, 8
+  token-display.unit.test.js
+  token-display.property.test.js      → Properties 9, 10
+  sidebar-integration.unit.test.js
+  sidebar-integration.property.test.js → Property 11
+  storage-integration.unit.test.js
+  storage-integration.property.test.js → Properties 12, 13
 ```
 
 ## Key Concepts
+
+### TokenTracker + TokenDisplay (token-tracker.js)
+- Plain browser script (no ESM) — exposes `window.TokenTracker`, `window.TokenDisplay`, and internal helpers via `globalThis`.
+- `TokenTracker.record({ raw, model, provider, promptMessages, completionText })` — extracts tokens from `raw.usage` or falls back to `ceil(chars/4)` estimation, calculates cost, accumulates state, persists to `chrome.storage.session`.
+- `TokenDisplay.update(state)` — renders the token panel in the DOM; shows/hides based on `cumulativeTotalTokens > 0`.
+- All operations are wrapped in try/catch — errors never propagate to the agent loop.
+- Tested with Vitest + fast-check (13 correctness properties, 100 runs each).
 
 ### Multi-Provider Architecture (providers/)
 - Handled by `ProviderManager` (`base.js`).
@@ -98,7 +126,7 @@ tools/              → Individual tool modules (each registers with ToolRegistr
 
 ## Data Storage
 
-All persistence via `chrome.storage.local`:
+All persistence via `chrome.storage.local` (and `chrome.storage.session` for token data):
 - `agent_sessions` — `{ [id]: Session }`
 - `agent_active_session` — session id string
 - `agent_memory` — `MemoryFact[]`
@@ -106,6 +134,7 @@ All persistence via `chrome.storage.local`:
 - `minimax_api_key` & `minimax_model`
 - `agent_mode` — current PromptEngine mode
 - `custom_instructions` — user's custom prompt additions
+- `token_usage_session` — `TokenState` snapshot (session storage, cleared on chat reset)
 
 ## Security
 

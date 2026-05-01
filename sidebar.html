@@ -93,6 +93,19 @@
       <button id="ask-highlight-btn" class="toast-btn">Ask AI about this →</button>
     </div>
 
+    <!-- Token Usage Summary Panel -->
+    <div id="token-display-panel" class="token-panel hidden" aria-live="polite" aria-label="Token usage summary" role="status">
+      <div class="token-panel-inner">
+        <span class="token-label">Tokens</span>
+        <span class="token-loading hidden" aria-hidden="true">⏳</span>
+        <span id="token-cumulative" class="token-cumulative">0</span>
+        <span id="token-breakdown" class="token-breakdown">↑0 ↓0</span>
+        <span id="token-calls" class="token-calls">0 calls</span>
+        <span id="token-cost" class="token-cost">$0.00</span>
+        <span id="token-last" class="token-last" title="Last call tokens"></span>
+      </div>
+    </div>
+
     <!-- Task Progress -->
     <div id="task-progress" class="task-progress hidden"></div>
 
@@ -143,6 +156,7 @@
   <script src="tools/evaluate.js"></script>
   <script src="tools/tab-manager.js"></script>
   <script src="prompt-engine.js"></script>
+  <script src="token-tracker.js"></script>
   <script src="sidebar.js"></script>
 </body>
 </html>

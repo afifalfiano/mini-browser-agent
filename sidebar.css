@@ -1176,3 +1176,70 @@ body {
   margin-left: auto;
 }
 
+
+/* ── Token Usage Summary Panel ── */
+.token-panel {
+  display: flex;
+  align-items: center;
+  background: var(--bg-2);
+  border-bottom: 1px solid var(--border);
+  padding: 6px 14px;
+  flex-shrink: 0;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.token-panel-inner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 11px;
+  width: 100%;
+  min-width: 0;
+}
+
+.token-label {
+  font-weight: 600;
+  color: var(--text-dim);
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+.token-loading {
+  color: var(--yellow);
+  font-size: 11px;
+  animation: pulse 1s infinite;
+  flex-shrink: 0;
+}
+
+.token-cumulative {
+  color: var(--text);
+  font-weight: 600;
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.token-breakdown {
+  color: var(--text-dim);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+}
+
+.token-calls {
+  color: var(--text-muted);
+  font-size: 10.5px;
+}
+
+.token-cost {
+  color: var(--green);
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 11px;
+}
+
+.token-last {
+  color: var(--text-muted);
+  font-size: 10px;
+  font-style: italic;
+}
