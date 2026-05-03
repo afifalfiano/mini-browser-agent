@@ -1,5 +1,8 @@
 config.js
 node_modules
 .env
+.kiro/
+.vscode/
+.claude/
 .DS_Store
 *.zip
